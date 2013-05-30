@@ -1,0 +1,27 @@
+Config {
+#    logfile = /var/log/moon/moc/client
+    logfile = mocclient
+    trace_level = 7
+}
+
+modules {
+    base {
+        0 {
+            ip = 172.10.7.204
+            port = 5000
+#           non_block = 1
+            timeout_s = 0
+            timeout_u = 800000
+        }
+    }
+
+    chat {
+        0 {
+            ip = 172.10.7.204
+            port = 5000
+            timeout_s = 0
+            timeout_u = 800000
+        }
+
+    }
+}

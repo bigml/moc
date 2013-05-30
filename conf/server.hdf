@@ -1,0 +1,21 @@
+Config {
+    logfile = /var/log/moon/moc/server
+    trace_level = 7
+}
+
+Server {
+    ip = 0.0.0.0
+    port = 5000
+    plugins {
+        0 = base
+        1 = chat
+    }
+}
+
+Plugin {
+    base {
+        dbsn = pgsql:dbname=merry host=localhost user=dida password=loveu
+    }
+    chat {
+    }
+}
