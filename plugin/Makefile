@@ -1,14 +1,14 @@
 MEVENT = 0
 
-BASEDIR = ../../
+BASEDIR = ../../moon/
 include $(BASEDIR)Make.env
 
 UNAME := $(shell uname)
 PREFIX=/usr/local
 
 CFLAGS += -shared -fPIC
-INC_MOON += -I../server -I../lib -Iprivate
-LIB_MOON += -levent -L../lib -lmoc
+INC_MOON += -I../server -Iprivate
+LIB_MOON += -levent
 
 SOURCES = $(wildcard *.c)
 LIB_PLUGIN = $(patsubst %.c, %.so, $(SOURCES))

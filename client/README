@@ -1,0 +1,12 @@
+client
+------
+    moc's client API for Linux, ios, android...
+
+
+
+macros
+------
+    EVENTLOOP - open select and command callback fuction for catch
+                server's message async.
+                or, the API can just trigger a message to server,
+                and wait it's response.

@@ -1,7 +1,7 @@
 #don't use libmevent
 MEVENT = 0
 
-BASEDIR = ../../
+BASEDIR = ../../moon/
 include $(BASEDIR)Make.env
 
 CFLAGS += -rdynamic

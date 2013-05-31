@@ -1,4 +1,4 @@
-BASEDIR = ../
+BASEDIR = ../moon/
 include $(BASEDIR)Make.env
 
 SUBDIR = server plugin client demo conf

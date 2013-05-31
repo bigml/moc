@@ -1,2 +1,43 @@
-moc - mini but extensiable online communication system
----
+moc 
+=== - mini but extensiable online communication system,
+      we use it on our small game mobile app.
+      most code stolen from nmdb, clearsilver... thanks them a lot.
+
+
+design
+------
+    Based on nmdb, one server can hold multi backend module
+    (per module, one plugin, one message queue, one thread);
+
+    And, one module can exist on many process or many servers
+    for load share.
+
+    consider doc/net-skeleton.png and the codes for more information.
+
+
+directory
+---------
+    moc/
+    |-- server             server daemon code (only tested on GNU/Linux)
+    |-- plugin             server application logic module code
+    |-- client             client API code (tested on Linux, ios, android)
+    |   `-- clearsilver    client API depend on clearsilver's util library
+    |-- conf               configration file
+    |-- demo               simple application demo(use client API)
+    `-- doc                documentation
+
+
+
+depend
+------
+    The server depend on cmoon's mnl library currently. so, checkout
+    git://github.com/bigml/cmoon.git into the moc's parent directory.
+    and do the rest lib/mnl's compile fuck, then, every thing goes ok.
+
+    Client is very easy to compile, gcc, xcode, ndk can compile client
+    directory to a static library.
+    Take a look on client/Makefile first, you need to manually define
+    some macros like EVENTLOOP, std=c99... on non-Linux enviorment.
+
+    And then, compile the chat demo, modify mocclient.hdf config file,
+    run it, hack it, have fun!
