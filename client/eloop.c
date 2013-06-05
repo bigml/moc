@@ -85,6 +85,7 @@ static void* el_routine(void *arg)
                     if (evt) mssrv_close(evt, conn[i].order, conn[i].fd);
 
                     conn[i].fd = -1;
+                    continue;
                 }
 
                 evt = hash_lookup(evth, conn[i].name);

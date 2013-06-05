@@ -61,7 +61,7 @@ static void rep_send_error(const struct req_info *req, const unsigned int code)
     MSG_DUMP("send: ",  minibuf, 4 * 4);
     
     /* If this send fails, there's nothing to be done */
-    r = send(req->fd, minibuf, 4 * 4, 0);
+    r = send(req->fd, minibuf, 4 * 4, MSG_NOSIGNAL);
 
     if (r < 0) {
         mtc_err("rep_send_error() failed");
@@ -79,7 +79,7 @@ static int rep_send(const struct req_info *req, const unsigned char *buf,
     
     c = 0;
     while (c < size) {
-        rv = send(req->fd, buf + c, size - c, 0);
+        rv = send(req->fd, buf + c, size - c, MSG_NOSIGNAL);
 
         if (rv == size) {
             return 1;
@@ -299,7 +299,7 @@ static void tcp_recv(int fd, short event, void *arg)
 
     if (tcpsock->buf == NULL) {
         /* New incoming message */
-        rv = recv(fd, static_buf, SBSIZE, 0);
+        rv = recv(fd, static_buf, SBSIZE, MSG_NOSIGNAL);
         if (rv < 0 && errno == EAGAIN) {
             /* We were awoken but have no data to read, so we do
              * nothing */
@@ -316,7 +316,7 @@ static void tcp_recv(int fd, short event, void *arg)
         /* We already got a partial message, complete it. */
         size_t maxtoread = tcpsock->pktsize - tcpsock->len;
 
-        rv = recv(fd, tcpsock->buf + tcpsock->len, maxtoread, 0);
+        rv = recv(fd, tcpsock->buf + tcpsock->len, maxtoread, MSG_NOSIGNAL);
         if (rv < 0 && errno == EAGAIN) {
             return;
         } else if (rv <= 0) {

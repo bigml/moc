@@ -72,6 +72,8 @@ int main(int argc, char *argv[])
 
     mtc_foo("starting moc");
 
+    signal(SIGPIPE, SIG_IGN);
+
     g_moc = moc_start();
 
     net_go();

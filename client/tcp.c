@@ -124,11 +124,11 @@ static ssize_t recv_msg(int fd, unsigned char *buf, size_t bsize)
     ssize_t rv, t;
     uint32_t msgsize;
 
-    rv = recv(fd, buf, bsize, 0);
+    rv = recv(fd, buf, bsize, MSG_NOSIGNAL);
     if (rv <= 0) return rv;
 
     if (rv < 4) {
-        t = srecv(fd, buf + rv, 4 - rv, 0);
+        t = srecv(fd, buf + rv, 4 - rv, MSG_NOSIGNAL);
         if (t <= 0) {
             return t;
         }
@@ -143,7 +143,7 @@ static ssize_t recv_msg(int fd, unsigned char *buf, size_t bsize)
         return -1;
 
     if (rv < msgsize) {
-        t = srecv(fd, buf + rv, msgsize - rv, 0);
+        t = srecv(fd, buf + rv, msgsize - rv, MSG_NOSIGNAL);
         if (t <= 0) {
             return t;
         }
@@ -185,7 +185,13 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize)
     memcpy(buf, (const void *) &len, 4);
 
     if (srv->fd <= 0) {
+        /*
+         * connect closed by server, catched by:
+         * 1. el_routine() on #ifdef EVENTLOOP or
+         * 2. moc_trigger() on #ifndef EVENTLOP
+         */
         mtc_dbg("connection closed, reconnect");
+
         /*
          * TODO
          * although we reconnect to the server agin,
@@ -199,8 +205,19 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize)
         }
     }
 
-    rv = ssend(srv->fd, buf, bsize, 0);
-    if (rv != bsize) return 0;
+    rv = ssend(srv->fd, buf, bsize, MSG_NOSIGNAL);
+    if (rv != bsize) {
+        if (rv < 0 && errno == EPIPE) {
+            close(srv->fd);
+            srv->fd = -1;
+            /*
+            if (!tcp_server_reconnect(srv)) return 0;
+            rv = ssend(srv->fd, buf, bsize, MSG_NOSIGNAL);
+            if (rv == bsize) return 1;
+            */
+        }
+        return 0;
+    }
     return 1;
 }
 
@@ -215,7 +232,17 @@ uint32_t tcp_get_rep(moc_srv *srv, unsigned char *buf, size_t bsize,
 
 rerecv:
     rv = recv_msg(srv->fd, buf, bsize);
-    if (rv <= 0) return -1;
+    if (rv <= 0) {
+        if (errno != EAGAIN) {
+            /*
+             * orderly shutdown or error
+             */
+            close(srv->fd);
+            srv->fd = -1;
+        }
+        
+        return -1;
+    }
 
     id = * ((uint32_t *) buf + 1);
     id = ntohl(id);
