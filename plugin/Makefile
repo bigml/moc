@@ -7,7 +7,7 @@ UNAME := $(shell uname)
 PREFIX=/usr/local
 
 CFLAGS += -shared -fPIC
-INC_MOON += -I../server -Iprivate
+INC_MOON += -I../client -I../server -Iprivate
 LIB_MOON += -levent
 
 SOURCES = $(wildcard *.c)

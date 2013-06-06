@@ -88,7 +88,7 @@ typedef struct _moc_srv {
     socklen_t srvlen;
     int nblock;
     struct timeval tv;
-    struct moc_t *evt;
+    struct _moc_t *evt;
 
     /*
      * process server's message
@@ -99,7 +99,7 @@ typedef struct _moc_srv {
     size_t excess;
 } moc_srv;
 
-typedef struct moc_t {
+typedef struct _moc_t {
     unsigned int nservers;
     moc_srv *servers;
     int cmd;

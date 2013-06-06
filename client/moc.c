@@ -3,13 +3,15 @@
 unsigned int g_reqid = 0;
 static moc_arg *m_arg = NULL;
 
-NEOERR* moc_init(char *path)
+/*
+ * local
+ * =====
+ */
+static HDF* _moc_get_confhdf(char *path)
 {
-    HDF *cfg, *node, *cnode;
-    char fpath[_POSIX_PATH_MAX], fname[_POSIX_PATH_MAX];
+    HDF *cfg;
+    char fpath[_POSIX_PATH_MAX], fname[_POSIX_PATH_MAX], *sfoo;
     NEOERR *err;
-
-    if (m_arg) return nerr_raise(NERR_ASSERT, "moc inited already");
 
     /*
      * config file
@@ -19,22 +21,32 @@ NEOERR* moc_init(char *path)
     snprintf(fname, sizeof(fname), "%s/%s", fpath, MOC_CONFIG_FILE);
     hdf_init(&cfg);
     err = hdf_read_file(cfg, fname);
-    if (err != STATUS_OK) return nerr_pass(err);
+    if (err != STATUS_OK) {
+        nerr_ignore(&err);
+        return NULL;
+    }
 
     /*
      * log file
      */
-    snprintf(fname, sizeof(fname), "%s/%s", fpath,
-             hdf_get_value(cfg, "Config.logfile", "mocclient"));
-    mtc_init(fname, hdf_get_int_value(cfg, "Config.trace_level", TC_DEFAULT_LEVEL));
-
+    snprintf(fname, sizeof(fname), "%s/mocclient", fpath);
+    sfoo = hdf_get_value(cfg, "Config.logfile", fname);
+    mtc_init(sfoo, hdf_get_int_value(cfg, "Config.trace_level", TC_DEFAULT_LEVEL));
     
     lerr_init();
 
-    m_arg = mocarg_init();
-    if (!m_arg) return nerr_raise(NERR_NOMEM, "alloc moc arg");
+    return hdf_get_obj(cfg, "modules");
 
-    node = hdf_get_child(cfg, "modules");
+    /* TODO cfg memory leak */
+}
+
+static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
+{
+    HDF *node, *cnode;
+
+    MOC_NOT_NULLB(pnode, evth);
+    
+    node = hdf_obj_child(pnode);
     while (node) {
         /*
          *per backend module
@@ -78,30 +90,21 @@ NEOERR* moc_init(char *path)
             cnode = hdf_obj_next(cnode);
         }
 
-        if (evt->nservers) hash_insert(m_arg->evth, (void*)strdup(mname), (void*)evt);
+        if (evt->nservers) hash_insert(evth, (void*)strdup(mname), (void*)evt);
 
         node = hdf_obj_next(node);
     }
 
-#ifdef EVENTLOOP
-    err = eloop_start(m_arg);
-    if (err != STATUS_OK) return nerr_pass(err);
-
-    err = mcbk_start(m_arg);
-    if (err != STATUS_OK) return nerr_pass(err);
-#endif
-
-    hdf_destroy(&cfg);
     return STATUS_OK;
 }
 
-void moc_destroy()
+static void _moc_destroy(moc_arg *arg)
 {
     char *key = NULL;
 
-    if (!m_arg) return;
+    if (!arg) return;
 
-    HASH *table = m_arg->evth;
+    HASH *table = arg->evth;
     moc_t *evt = (moc_t*)hash_next(table, (void**)&key);
     while (evt != NULL) {
         /* TODO moc_free */
@@ -111,7 +114,7 @@ void moc_destroy()
 
 #ifdef EVENTLOOP
     key = NULL;
-    table = m_arg->cbkh;
+    table = arg->cbkh;
     struct moc_cbk *c = hash_next(table, (void**)&key);
     while (c) {
         mcbk_destroy(c);
@@ -119,19 +122,18 @@ void moc_destroy()
         c = hash_next(table, (void**)&key);
     }
 
-    eloop_stop(m_arg);
-    mcbk_stop(m_arg);
+    eloop_stop(arg);
+    mcbk_stop(arg);
 #endif
 
-    mocarg_destroy(m_arg);
-    m_arg = NULL;
+    mocarg_destroy(arg);
 }
 
-HDF* moc_hdfsnd(char *module)
+static HDF* _moc_hdfsnd(moc_arg *arg, char *module)
 {
-    if (!m_arg || !module) return NULL;
+    if (!arg || !module) return NULL;
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     if (!evt) return NULL;
@@ -139,12 +141,12 @@ HDF* moc_hdfsnd(char *module)
     return evt->hdfsnd;
 }
 
-NEOERR* moc_set_param(char *module, char *key, char *val)
+static NEOERR* _moc_set_param(moc_arg *arg, char *module, char *key, char *val)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->evth);
+    MOC_NOT_NULLB(arg, arg->evth);
     MOC_NOT_NULLC(module, key, val);
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
@@ -154,12 +156,12 @@ NEOERR* moc_set_param(char *module, char *key, char *val)
     return STATUS_OK;
 }
 
-NEOERR* moc_set_param_int(char *module, char *key, int val)
+static NEOERR* _moc_set_param_int(moc_arg *arg, char *module, char *key, int val)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->evth);
+    MOC_NOT_NULLB(arg, arg->evth);
     MOC_NOT_NULLC(module, key, val);
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
@@ -169,12 +171,13 @@ NEOERR* moc_set_param_int(char *module, char *key, int val)
     return STATUS_OK;
 }
 
-NEOERR* moc_set_param_uint(char *module, char *key, unsigned int val)
+static NEOERR* _moc_set_param_uint(moc_arg *arg, char *module, char *key,
+                                   unsigned int val)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->evth);
+    MOC_NOT_NULLB(arg, arg->evth);
     MOC_NOT_NULLC(module, key, val);
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
@@ -187,12 +190,12 @@ NEOERR* moc_set_param_uint(char *module, char *key, unsigned int val)
     return STATUS_OK;
 }
 
-NEOERR* moc_set_param_int64(char *module, char *key, int64_t val)
+static NEOERR* _moc_set_param_int64(moc_arg *arg, char *module, char *key, int64_t val)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->evth);
+    MOC_NOT_NULLB(arg, arg->evth);
     MOC_NOT_NULLC(module, key, val);
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
@@ -205,12 +208,12 @@ NEOERR* moc_set_param_int64(char *module, char *key, int64_t val)
     return STATUS_OK;
 }
 
-NEOERR* moc_set_param_float(char *module, char *key, float val)
+static NEOERR* _moc_set_param_float(moc_arg *arg, char *module, char *key, float val)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->evth);
+    MOC_NOT_NULLB(arg, arg->evth);
     MOC_NOT_NULLC(module, key, val);
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
@@ -223,7 +226,8 @@ NEOERR* moc_set_param_float(char *module, char *key, float val)
     return STATUS_OK;
 }
 
-int moc_trigger(char *module, char *key, unsigned short cmd, unsigned short flags)
+static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cmd,
+                        unsigned short flags)
 {
     size_t t, ksize, vsize;
     moc_srv *srv;
@@ -231,9 +235,9 @@ int moc_trigger(char *module, char *key, unsigned short cmd, unsigned short flag
     moc_t *evt;
     uint32_t rv = REP_OK;
 
-    if (!m_arg || !module) return REP_ERR;
+    if (!arg || !module) return REP_ERR;
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     evt = hash_lookup(evth, module);
     if (!evt) {
@@ -299,13 +303,13 @@ int moc_trigger(char *module, char *key, unsigned short cmd, unsigned short flag
 //    if(srv->tv.tv_usec > 1000000) srv->tv.tv_usec = 900000;
 //    ts.tv_nsec += srv->tv.tv_usec * 1000;
     
-    mssync_lock(&(m_arg->mainsync));
-    int ret = mssync_timedwait(&(m_arg->mainsync), &ts);
+    mssync_lock(&(arg->mainsync));
+    int ret = mssync_timedwait(&(arg->mainsync), &ts);
     if (ret != 0 && ret != ETIMEDOUT) {
         mtc_err("Error in timedwait() %d", ret);
         return REP_ERR;
     }
-    mssync_unlock(&(m_arg->mainsync));
+    mssync_unlock(&(arg->mainsync));
 
     return REP_OK;
 #else
@@ -326,11 +330,11 @@ int moc_trigger(char *module, char *key, unsigned short cmd, unsigned short flag
     return rv;
 }
 
-HDF* moc_hdfrcv(char *module)
+HDF* _moc_hdfrcv(moc_arg *arg, char *module)
 {
-    if (!m_arg || !module) return NULL;
+    if (!arg || !module) return NULL;
 
-    HASH *evth = m_arg->evth;
+    HASH *evth = arg->evth;
     
     moc_t *evt = hash_lookup(evth, module);
     if (!evt) return NULL;
@@ -338,9 +342,10 @@ HDF* moc_hdfrcv(char *module)
     return evt->hdfrcv;
 }
 
-NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk)
+static NEOERR* _moc_regist_callback(moc_arg *arg, char *module, char *cmd,
+                                    MocCallback cmdcbk)
 {
-    MOC_NOT_NULLB(m_arg, m_arg->cbkh);
+    MOC_NOT_NULLB(arg, arg->cbkh);
     MOC_NOT_NULLC(module, cmd, cmdcbk);
     
 #ifdef EVENTLOOP
@@ -350,10 +355,218 @@ NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk)
     c->cmd = strdup(cmd);
     c->callback = cmdcbk;
 
-    mcbk_regist(m_arg->cbkh, module, cmd, c);
+    mcbk_regist(arg->cbkh, module, cmd, c);
     
 #else
     mtc_foo("can't regist callback without EVENTLOOP");
 #endif
     return STATUS_OK;
+}
+
+
+/*
+ * easy to use version
+ * ===================
+ */
+NEOERR* moc_init(char *path)
+{
+    HDF *node;
+    NEOERR *err;
+    
+    if (m_arg) return nerr_raise(NERR_ASSERT, "moc inited already");
+    
+    m_arg = mocarg_init();
+    if (!m_arg) return nerr_raise(NERR_NOMEM, "alloc moc arg");
+
+    node = _moc_get_confhdf(path);
+    if (!node) return nerr_raise(NERR_ASSERT, "config error");
+    err = _moc_load_fromhdf(node, m_arg->evth);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+#ifdef EVENTLOOP
+    err = eloop_start(m_arg);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    err = mcbk_start(m_arg);
+    if (err != STATUS_OK) return nerr_pass(err);
+#endif
+
+    return STATUS_OK;
+}
+
+NEOERR* moc_init_fromhdf(HDF *node, char *path)
+{
+    NEOERR *err;
+
+    if (m_arg) return nerr_raise(NERR_ASSERT, "moc inited already");
+    
+    m_arg = mocarg_init();
+    if (!m_arg) return nerr_raise(NERR_NOMEM, "alloc moc arg");
+
+    err = _moc_load_fromhdf(node, m_arg->evth);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+#ifdef EVENTLOOP
+    err = eloop_start(m_arg);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    err = mcbk_start(m_arg);
+    if (err != STATUS_OK) return nerr_pass(err);
+#endif
+
+    return STATUS_OK;
+}
+
+void moc_destroy()
+{
+    _moc_destroy(m_arg);
+}
+
+HDF* moc_hdfsnd(char *module)
+{
+    return _moc_hdfsnd(m_arg, module);
+}
+
+NEOERR* moc_set_param(char *module, char *key, char *val)
+{
+    return nerr_pass(_moc_set_param(m_arg, module, key, val));
+}
+
+NEOERR* moc_set_param_int(char *module, char *key, int val)
+{
+    return nerr_pass(_moc_set_param_int(m_arg, module, key, val));
+}
+
+NEOERR* moc_set_param_uint(char *module, char *key, unsigned int val)
+{
+    return nerr_pass(_moc_set_param_uint(m_arg, module, key, val));
+}
+
+NEOERR* moc_set_param_int64(char *module, char *key, int64_t val)
+{
+    return nerr_pass(_moc_set_param_int64(m_arg, module, key, val));
+}
+NEOERR* moc_set_param_float(char *module, char *key, float val)
+{
+    return nerr_pass(_moc_set_param_float(m_arg, module, key, val));
+}
+
+int moc_trigger(char *module, char *key, unsigned short cmd,
+                  unsigned short flags)
+{
+    return _moc_trigger(m_arg, module, key, cmd, flags);
+}
+
+HDF* moc_hdfrcv(char *module)
+{
+    return _moc_hdfrcv(m_arg, module);
+}
+
+NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk)
+{
+    return nerr_pass(_moc_regist_callback(m_arg, module, cmd, cmdcbk));
+}
+
+/*
+ * thread safe version
+ * ===================
+ */
+NEOERR* moc_init_r(char *path, moc_arg **arg)
+{
+    HDF *node;
+    NEOERR *err;
+    
+    MOC_NOT_NULLA(arg);
+
+    moc_arg *rarg = mocarg_init();
+    if (!rarg) nerr_raise(NERR_NOMEM, "alloc moc arg");
+
+    *arg = rarg;
+
+    node = _moc_get_confhdf(path);
+    if (!node) return nerr_raise(NERR_ASSERT, "config error");
+    err = _moc_load_fromhdf(node, rarg->evth);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+#ifdef EVENTLOOP
+    err = eloop_start(rarg);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    err = mcbk_start(rarg);
+    if (err != STATUS_OK) return nerr_pass(err);
+#endif
+
+    return STATUS_OK;
+}
+
+NEOERR* moc_init_fromhdf_r(HDF *node, moc_arg **arg)
+{
+    NEOERR *err;
+
+    MOC_NOT_NULLB(node, arg);
+
+    moc_arg *rarg = mocarg_init();
+    if (!rarg) nerr_raise(NERR_NOMEM, "alloc moc arg");
+
+    *arg = rarg;
+
+    err = _moc_load_fromhdf(node, rarg->evth);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+#ifdef EVENTLOOP
+    err = eloop_start(rarg);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    err = mcbk_start(rarg);
+    if (err != STATUS_OK) return nerr_pass(err);
+#endif
+
+    return STATUS_OK;
+}
+
+void moc_destroy_r(moc_arg *arg)
+{
+    _moc_destroy(arg);
+}
+
+HDF* moc_hdfsnd_r(moc_arg *arg, char *module)
+{
+    return _moc_hdfsnd(arg, module);
+}
+
+NEOERR* moc_set_param_r(moc_arg *arg, char *module, char *key, char *val)
+{
+    return nerr_pass(_moc_set_param(arg, module, key, val));
+}
+NEOERR* moc_set_param_int_r(moc_arg *arg, char *module, char *key, int val)
+{
+    return nerr_pass(_moc_set_param_int(arg, module, key, val));
+}
+NEOERR* moc_set_param_uint_r(moc_arg *arg, char *module, char *key, unsigned int val)
+{
+    return nerr_pass(_moc_set_param_uint(arg, module, key, val));
+}
+NEOERR* moc_set_param_int64_r(moc_arg *arg, char *module, char *key, int64_t val)
+{
+    return nerr_pass(_moc_set_param_int64(arg, module, key, val));
+}
+NEOERR* moc_set_param_float_r(moc_arg *arg, char *module, char *key, float val)
+{
+    return nerr_pass(_moc_set_param_float(arg, module, key, val));
+}
+
+int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
+                  unsigned short flags)
+{
+    return _moc_trigger(arg, module, key, cmd, flags);
+}
+
+HDF* moc_hdfrcv_r(moc_arg *arg, char *module)
+{
+    return _moc_hdfrcv(arg, module);
+}
+
+NEOERR* moc_regist_callback_r(moc_arg *arg, char *module, char *cmd, MocCallback cmdcbk)
+{
+    return nerr_pass(_moc_regist_callback(arg, module, cmd, cmdcbk));
 }

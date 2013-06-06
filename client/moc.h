@@ -29,6 +29,7 @@
 #include <arpa/inet.h>      /* htonls() and friends */
 #include <netinet/tcp.h>    /* TCP stuff */
 
+
 #include "ClearSilver.h"
 #include "mtrace.h"          /* trace */
 #include "moc-private.h"     /* client&server's public lib */
@@ -49,11 +50,20 @@ __BEGIN_DECLS
 #define MOC_CONFIG_FILE        "mocclient.hdf"
 
 /*
- * 初始化
+ * 初始化（从指定配置文件目录）
  * 该函数会从配置文件中读取所所有服务器列表, 初始化
- * path 软件运行时的绝对路径
+ * path mocclient.hdf 文件放置的路径（一般为软件运行时的绝对路径）
  */
 NEOERR* moc_init(char *path);
+
+/*
+ * 初始化（从配置文件HDF）
+ * used by server only currently, same as moc_init() without:
+ * 1. config file load and parse
+ * 2. trace init
+ * 3. lerr_init()
+ */
+NEOERR* moc_init_fromhdf(HDF *node, char *path);
 
 /*
  * 销毁
@@ -100,6 +110,36 @@ HDF* moc_hdfrcv(char *module);
  * 针对服务器主动发起的命令，绑定对应的回调函数
  */
 NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk);
+
+
+
+
+/*
+ * thread safe version
+ * ===================
+ * moc_xxx_r() are the thread safe version of moc_xxx()
+ * application should care about moc_arg *arg
+ *     store it on moc_init_r() return;
+ *     pass them on others moc_xxx_r().
+ */
+NEOERR* moc_init_r(char *path, moc_arg **arg);
+NEOERR* moc_init_fromhdf_r(HDF *node, moc_arg **arg);
+void moc_destroy_r(moc_arg *arg);
+
+HDF* moc_hdfsnd_r(moc_arg *arg, char *module);
+
+NEOERR* moc_set_param_r(moc_arg *arg, char *module, char *key, char *val);
+NEOERR* moc_set_param_int_r(moc_arg *arg, char *module, char *key, int val);
+NEOERR* moc_set_param_uint_r(moc_arg *arg, char *module, char *key, unsigned int val);
+NEOERR* moc_set_param_int64_r(moc_arg *arg, char *module, char *key, int64_t val);
+NEOERR* moc_set_param_float_r(moc_arg *arg, char *module, char *key, float val);
+
+int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
+                  unsigned short flags);
+
+HDF* moc_hdfrcv_r(moc_arg *arg, char *module);
+
+NEOERR* moc_regist_callback_r(moc_arg *arg, char *module, char *cmd, MocCallback cmdcbk);
 
 
 __END_DECLS

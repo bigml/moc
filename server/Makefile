@@ -1,15 +1,16 @@
 #don't use libmevent
 MEVENT = 0
+EVENTLOOP = 0
 
 BASEDIR = ../../moon/
 include $(BASEDIR)Make.env
 
 CFLAGS += -rdynamic
-INC_MOON += -I../lib
-LIB_MOON += -levent
+INC_MOON += -I../client
+LIB_MOON += -L../client -lmoc -levent
 
 SOURCE1 = cache.c
-SOURCES = cache.c main.c mocd.c lerr.c net.c packet.c parse.c queue.c syscmd.c tcp.c
+SOURCES = cache.c main.c mocd.c net.c parse.c queue.c syscmd.c tcp.c
 OBJS = $(patsubst %.c, %.o, $(SOURCES))
 DEPEND = .depend
 

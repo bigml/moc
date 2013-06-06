@@ -50,7 +50,7 @@ static void* callback_routine(void *arg)
 
 NEOERR* mcbk_start(moc_arg *arg)
 {
-    if (m_thread) return nerr_raise(NERR_ASSERT, "mcbk started already");
+    if (m_thread) return STATUS_OK;
 
     m_stop = false;
     m_thread = calloc(1, sizeof(pthread_t));

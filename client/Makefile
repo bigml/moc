@@ -1,5 +1,9 @@
 CC = gcc
+ifeq ($(NEL), 1)
 EVENTLOOP = 0
+else
+EVENTLOOP = 1
+endif
 
 CFLAGS = -g -Wall -std=c99 -D_XOPEN_SOURCE=600 -fno-strict-aliasing -D_GNU_SOURCE -D_DARWIN_C_SOURCE
 INC_MOC = -I./clearsilver

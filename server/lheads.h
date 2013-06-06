@@ -17,4 +17,12 @@
 #include "mocd.h"
 #include "syscmd.h"
 
+/*
+ * we need talk to other moc server through moc_trigger() and wait for response
+ * In this situation, I am a client actor.
+ * Other mocv can push message to me use the same method if they want, I'm a
+ * server, my major actor.
+ */
+#include "moc.h"
+
 #endif  /* __LHEADS_H */

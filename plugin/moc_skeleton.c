@@ -1,6 +1,9 @@
 #include "moc_plugin.h"
 #include "moc_skeleton.h"
 #include "skeleton_pri.h"
+#include "moc_base.h"
+
+static BaseInfo *m_base = NULL;
 
 static void skeleton_process_driver(EventEntry *entry, QueueEntry *q)
 {
@@ -15,6 +18,7 @@ static void skeleton_process_driver(EventEntry *entry, QueueEntry *q)
     mtc_dbg("process cmd %u", q->operation);
     switch (q->operation) {
         CASE_SYS_CMD(q->operation, q, e->cd, err);
+        CASE_BASE_CMD(m_base, q);
     case REQ_CMD_STATS:
         st->msg_stats++;
         err = STATUS_OK;
@@ -64,7 +68,7 @@ static EventEntry* skeleton_init_driver(void)
 {
     struct skeleton_entry *e = calloc(1, sizeof(struct skeleton_entry));
     if (e == NULL) return NULL;
-    //NEOERR *err;
+    NEOERR *err;
 
     e->base.name = (unsigned char*)strdup(PLUGIN_NAME);
     e->base.ksize = strlen(PLUGIN_NAME);
@@ -75,6 +79,9 @@ static EventEntry* skeleton_init_driver(void)
     //char *s = hdf_get_value(g_cfg, CONFIG_PATH".dbsn", NULL);
     //err = mdb_init(&e->db, s);
     //JUMP_NOK(err, error);
+    
+    err = base_info_init(&m_base);
+    JUMP_NOK(err, error);
     
     e->cd = cache_create(hdf_get_int_value(g_cfg, CONFIG_PATH".numobjs", 1024), 0);
     if (e->cd == NULL) {

@@ -41,3 +41,37 @@ depend
 
     And then, compile the chat demo, modify mocclient.hdf config file,
     run it, hack it, have fun!
+
+
+
+multi app dev
+-------------
+    Following steps can hold multiply application develop at the same time.
+    Which seprated public and application code clearly.
+        (MOC_PATH hold the moc public base code.
+         appxmoc hold the x application's logic code.
+         you can make appymoc, appzmoc, ...)
+
+    0
+    -
+    mkdir appxmoc;
+    cd appxmoc;
+
+    1
+    -
+    ln -s MOC_PATH/server .
+    ln -s MOC_PATH/client .
+
+    cp -rf MOC_PATH/conf .
+    cp MOC_PATH/Makefile .
+
+    mkdir plugin; mkdir plugin/private;
+    cd plugin/; cp MOC_PATH/plugin/Makefile .;
+    ln -s MOC_PATH/plugin/* .;
+    cd private; ln -s MOC_PATH/plugin/private/* .;
+
+    mkdir demo;
+    cd demo;
+    ln -s MOC_PATH/demo/Makefile .
+    ln -s MOC_PATH/demo/*.c .
+    ln -s ../conf/mocclient.hdf .

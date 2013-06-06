@@ -4,8 +4,6 @@
 #ifndef _CACHE_H
 #define _CACHE_H
 
-__BEGIN_DECLS
-
 #define MAX_CACHEKEY_LEN    1024
 
 extern volatile time_t g_ctime;
@@ -64,6 +62,5 @@ int cache_delf(struct cache *cd, const char *keyfmt, ...);
 int cache_incrf(struct cache *cd, int64_t increment, int64_t *newval,
                 const char *keyfmt, ...);
 
-__END_DECLS
 #endif
 

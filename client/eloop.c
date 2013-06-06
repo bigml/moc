@@ -118,7 +118,7 @@ static void* el_routine(void *arg)
 
 NEOERR* eloop_start(moc_arg *arg)
 {
-    if (m_thread) return nerr_raise(NERR_ASSERT, "eloop started already");
+    if (m_thread) return STATUS_OK;
 
     m_stop = false;
     m_thread = calloc(1, sizeof(pthread_t));
