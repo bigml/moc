@@ -2,6 +2,41 @@
  * moc client
  * client should runable on Linux, Mac, Android, ios...
  * so, make it as clean as possible
+ *
+ * API description
+ * ===============
+ * moc client API assembled by:
+ *     moc_init[_xxx], moc_destroy
+ *     moc_set_param[_xxx]
+ *     moc_hdfsnd, moc_hdfrcv
+ *     moc_trigger
+ *     moc_regist_callback
+ * typical application scenarios is:
+ *     init, regist callback, set parameter, and trigger
+ *
+ * the API have two sets for the following situations:
+ *     set one: easy to use set
+ *              these functions hold a static variable for internal use;
+ *              they CAN create message_receive_and_fire_callback threads.
+ *
+ *              but, can't be used on multi_thread_use enviorment, --e.g. you
+ *              can't call moc_trigger() on multi thread, especially trigger on
+ *              the same backend modlue on multi thread.
+ *
+ *     set two: thread safe set
+ *              these functions need application store and pass the moc_arg parameter;
+ *              they CAN'T create message_receive_and_fire_callback threads.
+ *
+ *              so, these functions just trigger and wait response,
+ *              can't hold the server_push_message.
+ *
+ *              but, they can be used on multi_thread_use enviorment(because moc_arg
+ *              stored and passed by caller). you can trigger to many many server and
+ *              wait for trustable response by many many thread if you want.
+ * these two sets functions can be used mixed.
+ * in other words:
+ *     hold message_receive_and_fire_callback on main thread;
+ *     trigger and wait response on other threadSSS.
  */
 
 #ifndef __MOC_H__
@@ -50,6 +85,11 @@ __BEGIN_DECLS
 #define MOC_CONFIG_FILE        "mocclient.hdf"
 
 /*
+ * easy to use set
+ * ===============
+ */
+
+/*
  * 初始化（从指定配置文件目录）
  * 该函数会从配置文件中读取所所有服务器列表, 初始化
  * path mocclient.hdf 文件放置的路径（一般为软件运行时的绝对路径）
@@ -90,7 +130,8 @@ NEOERR* moc_set_param_float(char *module, char *key, float val);
 /*
  * 触发请求
  * 因为需要支持设置不同参数的循环使用，故每次trigger时会清空对应 hdfsnd 中的数据.
- * 不可以同一次参数设置循环调用
+ * 不建议在多线程环境中并行调用该函数（特别是多线程中对同一个业务模块的并行触发）
+ * 如有并行调用需求，请使用后面的线程安全版本 moc_trigger_r()。
  * module: 业务模块名
  * key: 用来选择处理后端的关键字（如UIN等），提供的话可以有效避免缓存冗余，可以为NULL
  * cmd: 命令号，不可重复使用，必填
@@ -115,12 +156,13 @@ NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk);
 
 
 /*
- * thread safe version
- * ===================
+ * thread safe set
+ * ===============
  * moc_xxx_r() are the thread safe version of moc_xxx()
  * application should care about moc_arg *arg
  *     store it on moc_init_r() return;
  *     pass them on others moc_xxx_r().
+ * These functions without EVENTLOOP support, just trigger, and wait for response.
  */
 NEOERR* moc_init_r(char *path, moc_arg **arg);
 NEOERR* moc_init_fromhdf_r(HDF *node, moc_arg **arg);
@@ -138,8 +180,6 @@ int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
                   unsigned short flags);
 
 HDF* moc_hdfrcv_r(moc_arg *arg, char *module);
-
-NEOERR* moc_regist_callback_r(moc_arg *arg, char *module, char *cmd, MocCallback cmdcbk);
 
 
 __END_DECLS

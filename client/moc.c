@@ -365,8 +365,8 @@ static NEOERR* _moc_regist_callback(moc_arg *arg, char *module, char *cmd,
 
 
 /*
- * easy to use version
- * ===================
+ * easy to use set
+ * ===============
  */
 NEOERR* moc_init(char *path)
 {
@@ -468,8 +468,8 @@ NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk)
 }
 
 /*
- * thread safe version
- * ===================
+ * thread safe set
+ * ===============
  */
 NEOERR* moc_init_r(char *path, moc_arg **arg)
 {
@@ -488,14 +488,6 @@ NEOERR* moc_init_r(char *path, moc_arg **arg)
     err = _moc_load_fromhdf(node, rarg->evth);
     if (err != STATUS_OK) return nerr_pass(err);
 
-#ifdef EVENTLOOP
-    err = eloop_start(rarg);
-    if (err != STATUS_OK) return nerr_pass(err);
-
-    err = mcbk_start(rarg);
-    if (err != STATUS_OK) return nerr_pass(err);
-#endif
-
     return STATUS_OK;
 }
 
@@ -512,14 +504,6 @@ NEOERR* moc_init_fromhdf_r(HDF *node, moc_arg **arg)
 
     err = _moc_load_fromhdf(node, rarg->evth);
     if (err != STATUS_OK) return nerr_pass(err);
-
-#ifdef EVENTLOOP
-    err = eloop_start(rarg);
-    if (err != STATUS_OK) return nerr_pass(err);
-
-    err = mcbk_start(rarg);
-    if (err != STATUS_OK) return nerr_pass(err);
-#endif
 
     return STATUS_OK;
 }
@@ -564,9 +548,4 @@ int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
 HDF* moc_hdfrcv_r(moc_arg *arg, char *module)
 {
     return _moc_hdfrcv(arg, module);
-}
-
-NEOERR* moc_regist_callback_r(moc_arg *arg, char *module, char *cmd, MocCallback cmdcbk)
-{
-    return nerr_pass(_moc_regist_callback(arg, module, cmd, cmdcbk));
 }
