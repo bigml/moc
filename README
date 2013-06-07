@@ -1,13 +1,13 @@
 moc 
 === - mini but extensiable online communication system,
       we use it on our small game mobile app.
-      most code stolen from nmdb, clearsilver... thanks them a lot.
+      most codes stolen from nmdb, clearsilver... thanks them a lot.
 
 
 design
 ------
     Based on nmdb, one server can hold multi backend module
-    (per module, one plugin, one message queue, one thread);
+    (per module: one plugin, one message queue, one thread);
 
     And, one module can exist on many process or many servers
     for load share.

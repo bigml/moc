@@ -305,8 +305,13 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     
     mssync_lock(&(arg->mainsync));
     int ret = mssync_timedwait(&(arg->mainsync), &ts);
-    if (ret != 0 && ret != ETIMEDOUT) {
-        mtc_err("Error in timedwait() %d", ret);
+    if (ret != 0) {
+        if (ret == ETIMEDOUT) {
+            mssync_unlock(&arg->mainsync);
+            hdf_set_value(evt->hdfrcv, "Output.errmsg", "moc server died");
+        } else {
+            hdf_set_valuef(evt->hdfrcv, "Output.errmsg=timedwait error %d", ret);
+        }
         return REP_ERR;
     }
     mssync_unlock(&(arg->mainsync));
@@ -317,7 +322,10 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     if (flags & FLAGS_SYNC) {
         vsize = 0;
         rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
-        if (rv == -1) rv = REP_ERR;
+        if (rv == -1) {
+            hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+            rv = REP_ERR;
+        }
         evt->errcode = rv;
 
         if (vsize > 8) {

@@ -82,9 +82,8 @@ int main()
         moc_set_param("chat", "msg", msg);
         
         ret = moc_trigger("chat", NULL, 1011, FLAGS_SYNC);
-        if (PROCESS_OK(ret)) {
-            hdf_dump(moc_hdfrcv("chat"), NULL);
-        } else {
+        hdf_dump(moc_hdfrcv("chat"), NULL);
+        if (PROCESS_NOK(ret)) {
             printf("error %d\n", ret);
         }
     }
