@@ -2,7 +2,7 @@
 #define __CHAT_PRI_H__
 
 #define PLUGIN_NAME    "chat"
-#define CONFIG_PATH    PRE_SERVER"."PLUGIN_NAME
+#define CONFIG_PATH    "Plugin."PLUGIN_NAME
 
 struct chat_stats {
     unsigned long msg_total;

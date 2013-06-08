@@ -20,10 +20,9 @@ struct base_user {
     int port;
     int fd;
     /*
-     * 程序主动挂掉客户端链接时，需要手动设置tcpsock信息
-     *   我们保存tcpsock在此的原因在于要设置其appdata 和 on_close，
-     *   好让主线程能在客户端掉线时destroy掉用户(只有请求过1001的连接才会设置这些信息)。
-     *   也不排除tcpsock今后有其他用处
+     * 我们保存tcpsock在此的原因在于要设置其appdata 和 on_close，
+     * 好让主线程能在客户端掉线时destroy掉用户(只有请求过1001的连接才会设置这些信息)。
+     * 也不排除tcpsock今后有其他用处
      */
     struct tcp_socket *tcpsock;
     struct base_info *baseinfo;

@@ -2,7 +2,7 @@
 #define __BASE_PRI_H__
 
 #define PLUGIN_NAME    "base"
-#define CONFIG_PATH    PRE_SERVER"."PLUGIN_NAME
+#define CONFIG_PATH    "Plugin."PLUGIN_NAME
 
 struct base_stats {
     unsigned long msg_total;
