@@ -49,6 +49,9 @@ int main(int argc, char *argv[])
         }
     }
 
+    /* fell tired */
+    moc_hdfsnd(NULL);
+    
     sys_stats_init(&g_stat);
 
     err = mcfg_parse_file(myset.conffname, &g_cfg);
