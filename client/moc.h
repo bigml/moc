@@ -51,11 +51,13 @@
 #include <netdb.h>         /* gethostbyname() */
 #include <fcntl.h>
 #include <errno.h>
+
 #ifdef __MACH__
 #include <mach/clock.h>
 #include <mach/mach.h>
 #include <crt_externs.h>
 #define environ (*_NSGetEnviron())
+#define MSG_NOSIGNAL SO_NOSIGPIPE 
 #endif
 
 #include <sys/types.h>     /* socket defines */
