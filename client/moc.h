@@ -72,6 +72,7 @@
 #include "moc-private.h"     /* client&server's public lib */
 #include "internal.h"        /* client internal */
 #include "tcp.h"
+#include "moc-trigger.h"
 
 #ifdef EVENTLOOP
 #include <pthread.h>        /* for pthread_t */
@@ -149,6 +150,11 @@ int moc_trigger(char *module, char *key, unsigned short cmd, unsigned short flag
 HDF* moc_hdfrcv(char *module);
 
 /*
+ * 返回对应模块的错误吗
+ */
+int moc_errcode(char *module);
+
+/*
  * 绑定回调函数
  * 针对服务器主动发起的命令，绑定对应的回调函数
  */
@@ -182,6 +188,7 @@ int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
                   unsigned short flags);
 
 HDF* moc_hdfrcv_r(moc_arg *arg, char *module);
+int  moc_errcode_r(moc_arg *arg, char *module);
 
 
 __END_DECLS

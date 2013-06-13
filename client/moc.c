@@ -308,9 +308,9 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     if (ret != 0) {
         if (ret == ETIMEDOUT) {
             mssync_unlock(&arg->mainsync);
-            hdf_set_value(evt->hdfrcv, "Output.errmsg", "moc server died");
+            hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
         } else {
-            hdf_set_valuef(evt->hdfrcv, "Output.errmsg=timedwait error %d", ret);
+            hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
         }
         return REP_ERR;
     }
@@ -348,6 +348,18 @@ HDF* _moc_hdfrcv(moc_arg *arg, char *module)
     if (!evt) return NULL;
 
     return evt->hdfrcv;
+}
+
+int _moc_errcode(moc_arg *arg, char *module)
+{
+    if (!arg || !module) return -1;
+
+    HASH *evth = arg->evth;
+    
+    moc_t *evt = hash_lookup(evth, module);
+    if (!evt) return -1;
+
+    return evt->errcode;
 }
 
 static NEOERR* _moc_regist_callback(moc_arg *arg, char *module, char *cmd,
@@ -470,6 +482,11 @@ HDF* moc_hdfrcv(char *module)
     return _moc_hdfrcv(m_arg, module);
 }
 
+int moc_errcode(char *module)
+{
+    return _moc_errcode(m_arg, module);
+}
+
 NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk)
 {
     return nerr_pass(_moc_regist_callback(m_arg, module, cmd, cmdcbk));
@@ -556,4 +573,9 @@ int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
 HDF* moc_hdfrcv_r(moc_arg *arg, char *module)
 {
     return _moc_hdfrcv(arg, module);
+}
+
+int moc_errcode_r(moc_arg *arg, char *module)
+{
+    return _moc_errcode(arg, module);
 }
