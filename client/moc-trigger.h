@@ -21,8 +21,8 @@ __BEGIN_DECLS
         if (PROCESS_NOK(moc_trigger(module, key, cmd, flags))) {        \
             char *msg = hdf_get_value(moc_hdfrcv(module), PRE_ERRMSG, NULL); \
             char *trace = hdf_get_value(moc_hdfrcv(module), PRE_ERRTRACE, NULL); \
-            NEOERR *e = nerr_raise(moc_errcode(module), msg);           \
-            return nerr_pass_ctx(e, trace);                             \
+            NEOERR *zea = nerr_raise(moc_errcode(module), msg);         \
+            return nerr_pass_ctx(zea, trace);                           \
         }                                                               \
     } while(0)
 #define MOC_TRIGGER_VOID(module, key, cmd, flags)                   \
@@ -64,9 +64,9 @@ __BEGIN_DECLS
         if (PROCESS_NOK(moc_trigger_r(arg, module, key, cmd, flags))) { \
             char *msg = hdf_get_value(moc_hdfrcv_r(arg, module), PRE_ERRMSG, NULL); \
             char *trace = hdf_get_value(moc_hdfrcv_r(arg, module), PRE_ERRTRACE, NULL); \
-            NEOERR *e = nerr_raise(moc_errcode_r(arg, module), msg); \
-            return nerr_pass_ctx(e, trace);                         \
-        }                                                           \
+            NEOERR *zea = nerr_raise(moc_errcode_r(arg, module), msg);  \
+            return nerr_pass_ctx(zea, trace);                           \
+        }                                                               \
     } while(0)
 #define MOC_TRIGGER_VOID_R(arg, module, key, cmd, flags)                \
     do {                                                            \
