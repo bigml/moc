@@ -45,9 +45,12 @@ static void skeleton_process_driver(EventEntry *entry, QueueEntry *q)
             st->msg_badparam++;
         }
         TRACE_ERR(q, ret, err);
+        if (!(q->req->flags & FLAGS_SYNC)) {
+            base_msg_touser("error", q->hdfsnd, q->req->fd);
+        }
     }
     if (q->req->flags & FLAGS_SYNC) {
-            reply_trigger(q, ret);
+        reply_trigger(q, ret);
     }
 }
 

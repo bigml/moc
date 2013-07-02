@@ -206,3 +206,22 @@ void base_msg_free(unsigned char *buf)
     if (!buf) return;
     free(buf);
 }
+
+NEOERR* base_msg_touser(char *cmd, HDF *datanode, int fd)
+{
+    unsigned char *buf;
+    size_t len;
+    NEOERR *err;
+
+    MCS_NOT_NULLB(cmd, datanode);
+
+    err = base_msg_new(cmd, datanode, &buf, &len);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    err = base_msg_reply(buf, len, fd);
+    if (err != STATUS_OK) return nerr_pass(err);
+
+    base_msg_free(buf);
+
+    return STATUS_OK;
+}
