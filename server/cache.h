@@ -6,8 +6,6 @@
 
 #define MAX_CACHEKEY_LEN    1024
 
-extern volatile time_t g_ctime;
-
 struct cache {
     /* set directly by initialization */
     size_t numobjs;

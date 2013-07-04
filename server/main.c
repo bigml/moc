@@ -5,6 +5,7 @@ HDF *g_cfg = NULL;
 HASH *g_datah = NULL;
 
 volatile time_t g_ctime = 0;
+volatile double g_ctimef = 0.0;
 
 struct stats g_stat = {0};
 struct moc *g_moc = NULL;

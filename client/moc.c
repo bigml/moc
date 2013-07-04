@@ -112,6 +112,8 @@ static void _moc_destroy(moc_arg *arg)
         evt = hash_next(table, (void**)&key);
     }
 
+    hash_destroy(&arg->evth);
+
 #ifdef EVENTLOOP
     key = NULL;
     table = arg->cbkh;

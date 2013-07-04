@@ -15,7 +15,9 @@ static void time_up(int fd, short flags, void* arg)
     evtimer_set(ev, time_up, ev);
     evtimer_add(ev, &t);
 
-    g_ctime = time(NULL);
+    g_ctimef = ne_timef();
+    g_ctime = (time_t) g_ctimef;
+    //g_ctime = time(NULL);
 
     struct event_chain *c;
     struct event_entry *e;
