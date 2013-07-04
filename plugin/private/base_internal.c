@@ -21,6 +21,26 @@ NEOERR* base_info_init(struct base_info **binfo)
     return STATUS_OK;
 }
 
+void base_info_destroy(BaseInfo *binfo)
+{
+    char *key = NULL;
+    
+    if (!binfo) return;
+
+    HASH *table = binfo->userh;
+    BaseUser *user = hash_next(table, (void**)&key);
+    while (user) {
+        base_user_destroy(user);
+        
+        user = hash_next(table, (void**)&key);
+    }
+
+    hash_destroy(&binfo->userh);
+
+    free(binfo);
+}
+
+
 /*
  * user
  */
@@ -31,11 +51,16 @@ struct base_user *base_user_find(struct base_info *binfo, char *uid)
     return (struct base_user*)hash_lookup(binfo->userh, uid);
 }
 
-struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *q)
+struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *q,
+                                struct base_user *ruser, void (*user_destroy)(void *arg))
 {
     if (!binfo || !uid || !q || !q->req) return NULL;
     
-    struct base_user *user = calloc(1, sizeof(struct base_user));
+    struct base_user *user;
+
+    if (ruser) user = ruser;
+    else user = calloc(1, sizeof(struct base_user));
+
     if (!user) return NULL;
 
     struct sockaddr_in *clisa = (struct sockaddr_in*)q->req->clisa;
@@ -54,7 +79,10 @@ struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *
      */
     if (q->req->tcpsock) {
         q->req->tcpsock->appdata = user;
-        q->req->tcpsock->on_close = base_user_destroy;
+        if (user_destroy)
+            q->req->tcpsock->on_close = user_destroy;
+        else
+            q->req->tcpsock->on_close = base_user_destroy;
     }
     
     /*
@@ -68,7 +96,7 @@ struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *
     return user;
 }
 
-bool base_user_quit(struct base_info *binfo, char *uid)
+bool base_user_quit(struct base_info *binfo, char *uid, void (*user_destroy)(void *arg))
 {
     struct tcp_socket *tcpsock;
     struct base_user *user;
@@ -92,8 +120,9 @@ bool base_user_quit(struct base_info *binfo, char *uid)
         event_del(tcpsock->evt);
         tcp_socket_free(tcpsock);
     }
-    
-    base_user_destroy(user);
+
+    if (user_destroy) user_destroy(user);
+    else base_user_destroy(user);
     
     return true;
 }

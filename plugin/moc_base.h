@@ -1,12 +1,7 @@
 #ifndef __MOC_BASE_H__
 #define __MOC_BASE_H__
 
-#define PREFIX_BASE     "Base"
-
-enum {
-    REQ_CMD_BASE_JOIN = 1001,
-    REQ_CMD_BASE_QUIT
-};
+#include "moc_basem.h"
 
 struct base_info {
     int usernum;
@@ -29,47 +24,12 @@ struct base_user {
 };
 typedef struct base_user BaseUser;
 
-
-#define CASE_BASE_CMD(binfo, q)                 \
-    {                                           \
-    case REQ_CMD_BASE_JOIN:                     \
-        err = base_cmd_join(binfo, q);          \
-        break;                                  \
-    case REQ_CMD_BASE_QUIT:                     \
-        err = base_cmd_quit(binfo, q);          \
-        break;                                  \
-    }
-
-#define BASE_GET_UID(q, uid)                                    \
-    do {                                                        \
-        if (q->req->tcpsock && q->req->tcpsock->appdata) {      \
-            uid = ((BaseUser*)q->req->tcpsock->appdata)->uid;   \
-        } else {                                                \
-            return nerr_raise(REP_ERR_BADPARAM, "请先登陆");    \
-        }                                                       \
-    } while (0)
-
-#define BASE_FETCH_UID(q, uid)                                  \
-    do {                                                        \
-        if (q->req->tcpsock && q->req->tcpsock->appdata) {      \
-            uid = ((BaseUser*)q->req->tcpsock->appdata)->uid;   \
-        } else {                                                \
-            uid = NULL;                                         \
-        }                                                       \
-    } while (0)
-
-#define USER_START(userh, user)                     \
-    {                                               \
-    void *t_rsv_s = NULL;                           \
-    user = (BaseUser*)hash_next(userh, &t_rsv_s);   \
-    while (user)
-#define USER_NEXT(userh) (BaseUser*)hash_next(userh, &t_rsv_s);
-#define USER_END }
-
 NEOERR* base_info_init(BaseInfo **binfo);
+void base_info_destroy(BaseInfo *binfo);
 struct base_user *base_user_find(BaseInfo *binfo, char *uid);
-struct base_user *base_user_new(BaseInfo *binfo, char *uid, QueueEntry *q);
-bool base_user_quit(BaseInfo *binfo, char *uid);
+struct base_user *base_user_new(BaseInfo *binfo, char *uid, QueueEntry *q,
+                                BaseUser *ruser, void (*user_destroy)(void *arg));
+bool base_user_quit(BaseInfo *binfo, char *uid, void (*user_destroy)(void *arg));
 void base_user_destroy(void *arg);
 
 /*
@@ -84,6 +44,8 @@ void base_msg_free(unsigned char *buf);
  */
 NEOERR* base_msg_touser(char *cmd, HDF *datanode, int fd);
 
+NEOERR* base_cmd_joinf(struct base_info *binfo, QueueEntry *q,
+                       struct base_user *user, void (*user_destroy)(void *arg));
 NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q);
 NEOERR* base_cmd_quit(struct base_info *binfo, QueueEntry *q);
 

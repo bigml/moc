@@ -4,6 +4,8 @@
 #define PLUGIN_NAME    "base"
 #define CONFIG_PATH    "Plugin."PLUGIN_NAME
 
+#define PREFIX_BASE     "Base"
+
 struct base_stats {
     unsigned long msg_total;
     unsigned long msg_unrec;

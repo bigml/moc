@@ -4,14 +4,29 @@
 
 static struct base_info *m_base = NULL;
 
+NEOERR* base_cmd_joinf(struct base_info *binfo, QueueEntry *q,
+                       struct base_user *user, void (*user_destroy)(void *arg))
+{
+    char *uid;
+
+    REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
+
+    MCS_NOT_NULLC(binfo, q, user);
+
+    base_user_quit(binfo, uid, user_destroy);
+    base_user_new(binfo, uid, q, user, user_destroy);
+
+    return STATUS_OK;
+}
+
 NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q)
 {
     char *uid;
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
-    base_user_quit(binfo, uid);
-    base_user_new(binfo, uid, q);
+    base_user_quit(binfo, uid, NULL);
+    base_user_new(binfo, uid, q, NULL, NULL);
 
     return STATUS_OK;
 }
@@ -22,7 +37,7 @@ NEOERR* base_cmd_quit(struct base_info *binfo, QueueEntry *q)
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
-    base_user_quit(binfo, uid);
+    base_user_quit(binfo, uid, NULL);
     
     return STATUS_OK;
 }
@@ -82,7 +97,7 @@ static void base_stop_driver(EventEntry *entry)
      */
     mdb_destroy(e->db);
     cache_free(e->cd);
-    /* TODO base_info_destroy() */
+    base_info_destroy(m_base);
 }
 
 
