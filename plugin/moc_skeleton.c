@@ -77,7 +77,7 @@ static EventEntry* skeleton_init_driver(void)
     e->base.ksize = strlen(PLUGIN_NAME);
     e->base.process_driver = skeleton_process_driver;
     e->base.stop_driver = skeleton_stop_driver;
-    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term);
+    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term, NULL);
 
     //char *s = hdf_get_value(g_cfg, CONFIG_PATH".dbsn", NULL);
     //err = mdb_init(&e->db, s);

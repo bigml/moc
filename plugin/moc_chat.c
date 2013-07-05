@@ -29,7 +29,7 @@ static NEOERR* cmd_join(struct chat_entry *e, QueueEntry *q)
         if (strcmp(uid, user->uid)) {
             mtc_dbg("need to tel %s", user->uid);
 
-            base_msg_reply(msgbuf, msgsize, user->fd);
+            base_msg_send(msgbuf, msgsize, user->fd);
         }
 
         user = USER_NEXT(m_base->userh);
@@ -61,7 +61,7 @@ static NEOERR* cmd_quit(struct chat_entry *e, QueueEntry *q)
         if (strcmp(uid, user->uid)) {
             mtc_dbg("need to tel %s", user->uid);
 
-            base_msg_reply(msgbuf, msgsize, user->fd);
+            base_msg_send(msgbuf, msgsize, user->fd);
         }
 
         user = USER_NEXT(m_base->userh);
@@ -99,7 +99,7 @@ static NEOERR* cmd_bcst(struct chat_entry *e, QueueEntry *q)
         if (strcmp(uid, user->uid)) {
             mtc_dbg("need to tel %s", user->uid);
 
-            base_msg_reply(msgbuf, msgsize, user->fd);
+            base_msg_send(msgbuf, msgsize, user->fd);
         }
 
         user = USER_NEXT(m_base->userh);
@@ -199,7 +199,7 @@ static EventEntry* chat_init_driver(void)
     e->base.ksize = strlen(PLUGIN_NAME);
     e->base.process_driver = chat_process_driver;
     e->base.stop_driver = chat_stop_driver;
-    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term);
+    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term, NULL);
 
     //char *s = hdf_get_value(g_cfg, CONFIG_PATH".dbsn", NULL);
     //err = mdb_init(&e->db, s);

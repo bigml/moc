@@ -36,7 +36,7 @@ void base_user_destroy(void *arg);
  * alloc & decallc message one time, and can be reply to many users
  */
 NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size);
-NEOERR* base_msg_reply(unsigned char *buf, size_t size, int fd);
+NEOERR* base_msg_send(unsigned char *buf, size_t size, int fd);
 void base_msg_free(unsigned char *buf);
 
 /*
@@ -44,8 +44,9 @@ void base_msg_free(unsigned char *buf);
  */
 NEOERR* base_msg_touser(char *cmd, HDF *datanode, int fd);
 
-NEOERR* base_cmd_joinf(struct base_info *binfo, QueueEntry *q,
-                       struct base_user *user, void (*user_destroy)(void *arg));
+/*
+ * pubic logic function
+ */
 NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q);
 NEOERR* base_cmd_quit(struct base_info *binfo, QueueEntry *q);
 

@@ -4,21 +4,6 @@
 
 static struct base_info *m_base = NULL;
 
-NEOERR* base_cmd_joinf(struct base_info *binfo, QueueEntry *q,
-                       struct base_user *user, void (*user_destroy)(void *arg))
-{
-    char *uid;
-
-    REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
-
-    MCS_NOT_NULLC(binfo, q, user);
-
-    base_user_quit(binfo, uid, user_destroy);
-    base_user_new(binfo, uid, q, user, user_destroy);
-
-    return STATUS_OK;
-}
-
 NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q)
 {
     char *uid;
@@ -112,7 +97,7 @@ static EventEntry* base_init_driver(void)
     e->base.ksize = strlen(PLUGIN_NAME);
     e->base.process_driver = base_process_driver;
     e->base.stop_driver = base_stop_driver;
-    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term);
+    //moc_add_timer(&e->base.timers, 60, true, hint_timer_up_term, NULL);
 
     //char *s = hdf_get_value(g_cfg, CONFIG_PATH".dbsn", NULL);
     //err = mdb_init(&e->db, s);

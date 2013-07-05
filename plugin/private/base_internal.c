@@ -201,7 +201,7 @@ NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size
     return STATUS_OK;
 }
 
-NEOERR* base_msg_reply(unsigned char *buf, size_t size, int fd)
+NEOERR* base_msg_send(unsigned char *buf, size_t size, int fd)
 {
     MCS_NOT_NULLA(buf);
     if (fd <= 0) return nerr_raise(NERR_ASSERT, "fd 非法");
@@ -247,7 +247,7 @@ NEOERR* base_msg_touser(char *cmd, HDF *datanode, int fd)
     err = base_msg_new(cmd, datanode, &buf, &len);
     if (err != STATUS_OK) return nerr_pass(err);
 
-    err = base_msg_reply(buf, len, fd);
+    err = base_msg_send(buf, len, fd);
     if (err != STATUS_OK) return nerr_pass(err);
 
     base_msg_free(buf);
