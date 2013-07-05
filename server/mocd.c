@@ -228,7 +228,8 @@ void moc_stop(struct moc *evt)
 }
 
 void moc_add_timer(struct timer_entry **timers, int timeout, bool repeat,
-                   void (*timer)(struct event_entry *e, unsigned int upsec))
+                   void (*timer)(struct event_entry *e, unsigned int upsec, void *data),
+                   void *data)
 {
     if (!timers || !timer) return;
 
@@ -238,6 +239,7 @@ void moc_add_timer(struct timer_entry **timers, int timeout, bool repeat,
         t->repeat = repeat;
         t->timer = timer;
         t->next = *timers;
+        t->data = data;
         *timers = t;
     }
 }

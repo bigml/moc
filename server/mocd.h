@@ -21,7 +21,8 @@ struct event_chain {
 struct timer_entry {
     int timeout;
     bool repeat;
-    void (*timer)(struct event_entry *e, unsigned int upsec);
+    void (*timer)(struct event_entry *e, unsigned int upsec, void *data);
+    void *data;
     struct timer_entry *next;
 };
 
@@ -62,7 +63,8 @@ typedef struct event_entry EventEntry;
 struct moc* moc_start();
 void moc_stop(struct moc *evt);
 void moc_add_timer(struct timer_entry **timers, int timeout, bool repeat,
-                   void (*timer)(struct event_entry *e, unsigned int upsec));
+                   void (*timer)(struct event_entry *e, unsigned int upsec, void *data),
+                   void *data);
 
 struct event_entry* find_entry_in_table(struct moc *evt,
                                         const unsigned char *key, size_t ksize);

@@ -4,10 +4,9 @@
 static void time_up(int fd, short flags, void* arg)
 {
     struct event *ev = (struct event*)arg;
-    struct timeval t = {.tv_sec = 1, .tv_usec = 0};
+    struct timeval t = {.tv_sec = 0, .tv_usec = 100000};
     static bool initialized = false;
-    static int intime = 0;
-    intime++;
+    static int upsec = 0;
 
     if (initialized) event_del(ev);
     else initialized = true;
@@ -16,8 +15,8 @@ static void time_up(int fd, short flags, void* arg)
     evtimer_add(ev, &t);
 
     g_ctimef = ne_timef();
+    if ((time_t)g_ctimef - g_ctime >= 1) upsec += (time_t)g_ctimef - g_ctime;
     g_ctime = (time_t) g_ctimef;
-    //g_ctime = time(NULL);
 
     struct event_chain *c;
     struct event_entry *e;
@@ -26,12 +25,25 @@ static void time_up(int fd, short flags, void* arg)
 
         e = c->first;
         while (e) {
-            struct timer_entry *t = e->timers;
+            struct timer_entry *t = e->timers, *p, *n;
+            p = n = t;
             while (t && t->timeout > 0) {
-                if (intime % t->timeout == 0) {
-                    t->timer(e, intime);
-                    if (!t->repeat) t->timeout = 0;
+                if (upsec % t->timeout == 0) {
+                    t->timer(e, upsec, t->data);
+                    if (!t->repeat) {
+                        /*
+                         * drop this timer, for cpu useage
+                         */
+                        if (t == e->timers) e->timers = t->next;
+                        else p->next = t->next;
+                        
+                        n = t->next;
+                        free(t);
+                        t = n;
+                        continue;
+                    }
                 }
+                p = t;
                 t = t->next;
             }
             e = e->next;
@@ -65,7 +77,7 @@ void net_go()
     event_set(&ev, fd, EV_READ | EV_PERSIST, tcp_newconnection, &ev);
     event_add(&ev, NULL);
 
-    struct timeval t = {.tv_sec = 1, .tv_usec = 0};
+    struct timeval t = {.tv_sec = 0, .tv_usec = 100000};
     evtimer_set(&ev_clock, time_up, &ev_clock);
     evtimer_add(&ev_clock, &t);
 
