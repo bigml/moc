@@ -219,7 +219,7 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
         /*
          * suspend trigger thread, wait for application JOIN
          */
-        sleep(2);
+        sleep(1);
 #endif
     }
 
