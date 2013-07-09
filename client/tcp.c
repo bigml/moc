@@ -176,7 +176,7 @@ int moc_add_tcp_server(moc_t *evt, const char *addr, int port,
     return add_tcp_server_addr(evt, &(ia.s_addr), port, nblock, (struct timeval*)tv);
 }
 
-int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize)
+int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
 {
     ssize_t rv;
     uint32_t len;
@@ -193,16 +193,34 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize)
         mtc_dbg("connection closed, reconnect");
 
         /*
-         * TODO
          * although we reconnect to the server agin,
          * but we haven't do application's JOIN command to do further communicate
          * so, application need do JOIN on reconnect
-         * need a system_callback here
+         * fireup an _reconnect callback here
          */
         if (!tcp_server_reconnect(srv)) {
             mtc_dbg("reconnect failure");
             return 0;
         }
+
+#ifdef EVENTLOOP
+        struct msqueue_entry *e = msqueue_entry_create();
+        if (!e) {
+            mtc_err("no mem");
+            return 0;
+        }
+        e->ename = strdup(srv->evt->ename);
+        e->cmd = strdup("_reconnect");
+
+        mssync_lock(&arg->callbacksync);
+        msqueue_put(arg->callbackqueue, e);
+        mssync_unlock(&arg->callbacksync);
+
+        /*
+         * suspend trigger thread, wait for application JOIN
+         */
+        sleep(2);
+#endif
     }
 
     rv = ssend(srv->fd, buf, bsize, MSG_NOSIGNAL);

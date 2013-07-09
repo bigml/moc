@@ -247,6 +247,8 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
         return REP_ERR;
     }
 
+    mtc_dbg("trigger cmd %d with %d flags on event %s %s", cmd, flags, module, key);
+
     evt->cmd = cmd;
     evt->flags = flags;
     ksize = strlen(module);
@@ -281,7 +283,7 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
         evt->psize += sizeof(uint32_t);
     }
     
-    t = tcp_srv_send(srv, evt->payload, evt->psize);
+    t = tcp_srv_send(srv, evt->payload, evt->psize, arg);
     if (t <= 0) {
         evt->errcode = REP_ERR_SEND;
         return REP_ERR_SEND;
