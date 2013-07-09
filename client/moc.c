@@ -442,6 +442,7 @@ NEOERR* moc_init_fromhdf(HDF *node, char *path)
 void moc_destroy()
 {
     _moc_destroy(m_arg);
+    m_arg = NULL;
 }
 
 HDF* moc_hdfsnd(char *module)
