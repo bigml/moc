@@ -109,6 +109,7 @@ static void _moc_destroy(moc_arg *arg)
     while (evt != NULL) {
         for (int i = 0; i < evt->nservers; i++) {
             if (evt->servers[i].buf) free(evt->servers[i].buf);
+            close(evt->servers[i].fd);
         }
         if (evt->servers) free(evt->servers);
         
