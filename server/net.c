@@ -7,6 +7,7 @@ static void time_up(int fd, short flags, void* arg)
     struct timeval t = {.tv_sec = 0, .tv_usec = 100000};
     static bool initialized = false;
     static int upsec = 0;
+    bool stepsec = false;
 
     if (initialized) event_del(ev);
     else initialized = true;
@@ -15,9 +16,17 @@ static void time_up(int fd, short flags, void* arg)
     evtimer_add(ev, &t);
 
     g_ctimef = ne_timef();
-    if ((time_t)g_ctimef - g_ctime >= 1) upsec += (time_t)g_ctimef - g_ctime;
+    if ((time_t)g_ctimef - g_ctime >= 1) {
+        upsec += (time_t)g_ctimef - g_ctime;
+        stepsec = true;
+    }
     g_ctime = (time_t) g_ctimef;
 
+    /*
+     * don't call callback multi time in one second
+     */
+    if (!stepsec) return;
+    
     struct event_chain *c;
     struct event_entry *e;
     for (size_t i = 0; i < g_moc->hashlen; i++) {
