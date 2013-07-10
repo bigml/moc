@@ -107,8 +107,19 @@ static void _moc_destroy(moc_arg *arg)
     HASH *table = arg->evth;
     moc_t *evt = (moc_t*)hash_next(table, (void**)&key);
     while (evt != NULL) {
-        /* TODO moc_free */
-        //moc_free(evt);
+        for (int i = 0; i < evt->nservers; i++) {
+            if (evt->servers[i].buf) free(evt->servers[i].buf);
+        }
+        if (evt->servers) free(evt->servers);
+        
+        if (evt->ename) free(evt->ename);
+        if (evt->rcvbuf) free(evt->rcvbuf);
+        if (evt->payload) free(evt->payload);
+        hdf_destroy(&evt->hdfrcv);
+        hdf_destroy(&evt->hdfsnd);
+        
+        free(evt);
+        
         evt = hash_next(table, (void**)&key);
     }
 
