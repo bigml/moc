@@ -218,10 +218,9 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
             return 0;
         }
         e->ename = strdup(srv->evt->ename);
-        if (reconnectok)
-            e->cmd = strdup("_reconnectok");
-        else
-            e->cmd = strdup("_reconnectnok");
+        e->cmd = strdup("_reconnect");
+        if (reconnectok) hdf_set_value(e->hdfrcv, "success", "1");
+        else hdf_set_value(e->hdfrcv, "success", "0");
 
         mssync_lock(&arg->callbacksync);
         msqueue_put(arg->callbackqueue, e);
