@@ -101,10 +101,25 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
 static void _moc_destroy(moc_arg *arg)
 {
     char *key = NULL;
+    HASH *table;
 
     if (!arg) return;
 
-    HASH *table = arg->evth;
+#ifdef EVENTLOOP
+    eloop_stop(arg);
+    mcbk_stop(arg);
+
+    table = arg->cbkh;
+    struct moc_cbk *c = hash_next(table, (void**)&key);
+    while (c) {
+        mcbk_destroy(c);
+        
+        c = hash_next(table, (void**)&key);
+    }
+#endif
+
+    key = NULL;
+    table = arg->evth;
     moc_t *evt = (moc_t*)hash_next(table, (void**)&key);
     while (evt != NULL) {
         for (int i = 0; i < evt->nservers; i++) {
@@ -125,20 +140,6 @@ static void _moc_destroy(moc_arg *arg)
     }
 
     hash_destroy(&arg->evth);
-
-#ifdef EVENTLOOP
-    key = NULL;
-    table = arg->cbkh;
-    struct moc_cbk *c = hash_next(table, (void**)&key);
-    while (c) {
-        mcbk_destroy(c);
-        
-        c = hash_next(table, (void**)&key);
-    }
-
-    eloop_stop(arg);
-    mcbk_stop(arg);
-#endif
 
     mocarg_destroy(arg);
 }
