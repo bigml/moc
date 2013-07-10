@@ -185,6 +185,7 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
     memcpy(buf, (const void *) &len, 4);
 
     if (srv->fd <= 0) {
+        bool reconnectok = true;
         /*
          * connect closed by server, catched by:
          * 1. el_routine() on #ifdef EVENTLOOP or
@@ -200,32 +201,48 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
          */
         if (!tcp_server_reconnect(srv)) {
             mtc_dbg("reconnect failure");
+            
+            reconnectok = false;
+#ifndef EVENTLOOP
             return 0;
+#endif
         }
 
 #ifdef EVENTLOOP
+        unsigned char lbuf[SBSIZE];
+        memcpy(lbuf, buf, bsize);
+        
         struct msqueue_entry *e = msqueue_entry_create();
         if (!e) {
             mtc_err("no mem");
             return 0;
         }
         e->ename = strdup(srv->evt->ename);
-        e->cmd = strdup("_reconnect");
+        if (reconnectok)
+            e->cmd = strdup("_reconnectok");
+        else
+            e->cmd = strdup("_reconnectnok");
 
         mssync_lock(&arg->callbacksync);
         msqueue_put(arg->callbackqueue, e);
         mssync_unlock(&arg->callbacksync);
 
-        /*
-         * suspend trigger thread, wait for application JOIN
-         */
-        sleep(1);
+        if (reconnectok) {
+            /*
+             * suspend trigger thread, wait for application JOIN
+             */
+            sleep(1);
+            rv = ssend(srv->fd, lbuf, bsize, MSG_NOSIGNAL);
+            if (rv != bsize) return 0;
+            return 1;
+        } else return 0;
 #endif
     }
 
     rv = ssend(srv->fd, buf, bsize, MSG_NOSIGNAL);
     if (rv != bsize) {
         if (rv < 0 && errno == EPIPE) {
+            mtc_dbg("%s %d closed", srv->evt->ename, srv->fd);
             close(srv->fd);
             srv->fd = -1;
             /*
