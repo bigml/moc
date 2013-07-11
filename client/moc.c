@@ -36,8 +36,6 @@ static HDF* _moc_get_confhdf(char *path)
     lerr_init();
 
     return hdf_get_obj(cfg, "modules");
-
-    /* TODO cfg memory leak */
 }
 
 static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
@@ -428,6 +426,9 @@ NEOERR* moc_init(char *path)
     if (err != STATUS_OK) return nerr_pass(err);
 #endif
 
+    node = hdf_obj_top(node);
+    hdf_destroy(&node);
+
     return STATUS_OK;
 }
 
@@ -530,6 +531,9 @@ NEOERR* moc_init_r(char *path, moc_arg **arg)
     if (!node) return nerr_raise(NERR_ASSERT, "config error");
     err = _moc_load_fromhdf(node, rarg->evth);
     if (err != STATUS_OK) return nerr_pass(err);
+
+    node = hdf_obj_top(node);
+    hdf_destroy(&node);
 
     return STATUS_OK;
 }

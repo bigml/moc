@@ -68,8 +68,9 @@ static void* el_routine(void *arg)
             if (FD_ISSET(conn[i].fd, &readset)) {
                 int rv = recv(conn[i].fd, static_buf, SBSIZE, 0);
 
-                mtc_dbg("msg from %s %d fd %d len %d",
-                        conn[i].name, conn[i].order, conn[i].fd, rv);
+                mtc_dbg("msg from %s %d fd %d len %d %d %s",
+                        conn[i].name, conn[i].order, conn[i].fd, rv,
+                        errno, strerror(errno));
 
                 if (rv < 0 && errno == EAGAIN) {
                     /*
@@ -108,6 +109,8 @@ static void* el_routine(void *arg)
                     }
                 }
             }
+            
+            if (conn[i].name) free(conn[i].name);
         }
 
         if (m_stop) break;
