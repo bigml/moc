@@ -58,6 +58,9 @@ struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *
     
     struct base_user *user;
 
+    user = base_user_find(binfo, uid);
+    if (user) return user;
+    
     if (ruser) user = ruser;
     else user = calloc(1, sizeof(struct base_user));
 
@@ -96,13 +99,19 @@ struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *
     return user;
 }
 
-bool base_user_quit(struct base_info *binfo, char *uid, void (*user_destroy)(void *arg))
+bool base_user_quit(struct base_info *binfo, char *uid,
+                    QueueEntry *q, void (*user_destroy)(void *arg))
 {
     struct tcp_socket *tcpsock;
     struct base_user *user;
 
     user = base_user_find(binfo, uid);
     if (!user) return false;
+    
+    if (q && q->req->tcpsock) {
+        if (q->req->tcpsock == user->tcpsock && q->req->fd == user->fd)
+            return false;
+    }
     
     mtc_dbg("%s %s %d quit", user->uid, user->ip, user->port);
 
@@ -119,6 +128,7 @@ bool base_user_quit(struct base_info *binfo, char *uid, void (*user_destroy)(voi
         tcpsock->on_close = NULL;
         event_del(tcpsock->evt);
         tcp_socket_free(tcpsock);
+        user->tcpsock = NULL;
     }
 
     if (user_destroy) user_destroy(user);

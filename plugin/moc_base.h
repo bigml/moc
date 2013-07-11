@@ -29,7 +29,8 @@ void base_info_destroy(BaseInfo *binfo);
 struct base_user *base_user_find(BaseInfo *binfo, char *uid);
 struct base_user *base_user_new(BaseInfo *binfo, char *uid, QueueEntry *q,
                                 BaseUser *ruser, void (*user_destroy)(void *arg));
-bool base_user_quit(BaseInfo *binfo, char *uid, void (*user_destroy)(void *arg));
+bool base_user_quit(BaseInfo *binfo, char *uid,
+                    QueueEntry *q, void (*user_destroy)(void *arg));
 void base_user_destroy(void *arg);
 
 /*

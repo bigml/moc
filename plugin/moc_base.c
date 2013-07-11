@@ -10,7 +10,7 @@ NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q)
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
-    base_user_quit(binfo, uid, NULL);
+    base_user_quit(binfo, uid, q, NULL);
     base_user_new(binfo, uid, q, NULL, NULL);
 
     return STATUS_OK;
@@ -22,7 +22,7 @@ NEOERR* base_cmd_quit(struct base_info *binfo, QueueEntry *q)
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
-    base_user_quit(binfo, uid, NULL);
+    base_user_quit(binfo, uid, NULL, NULL);
     
     return STATUS_OK;
 }

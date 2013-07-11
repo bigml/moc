@@ -16,7 +16,7 @@ static NEOERR* cmd_join(struct chat_entry *e, QueueEntry *q)
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
-    base_user_quit(m_base, uid, NULL);
+    base_user_quit(m_base, uid, q, NULL);
     base_user_new(m_base, uid, q, NULL, NULL);
 
     hdf_set_value(q->hdfrcv, PRE_OUTPUT".userid", uid);
@@ -69,7 +69,7 @@ static NEOERR* cmd_quit(struct chat_entry *e, QueueEntry *q)
 
     base_msg_free(msgbuf);
 
-    base_user_quit(m_base, uid, NULL);
+    base_user_quit(m_base, uid, NULL, NULL);
 
     return STATUS_OK;
 }
