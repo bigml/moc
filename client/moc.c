@@ -314,7 +314,8 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     
     struct timespec ts;
     mutil_utc_time(&ts);
-    ts.tv_sec += srv->tv.tv_sec + 1;
+    if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
+    ts.tv_sec += srv->tv.tv_sec;
 //    if(srv->tv.tv_usec > 1000000) srv->tv.tv_usec = 900000;
 //    ts.tv_nsec += srv->tv.tv_usec * 1000;
     
