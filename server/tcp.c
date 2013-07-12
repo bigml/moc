@@ -239,7 +239,7 @@ void tcp_close(int fd)
 /* Called by libevent for each receive event on our listen fd */
 void tcp_newconnection(int fd, short event, void *arg)
 {
-    int newfd;
+    int newfd, optval;
     struct tcp_socket *tcpsock;
     struct event *new_event;
 
@@ -265,6 +265,9 @@ void tcp_newconnection(int fd, short event, void *arg)
         free(tcpsock);
         return;
     }
+
+    optval = 1;
+    setsockopt(newfd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
 
     tcpsock->fd = newfd;
     tcpsock->evt = new_event;
@@ -303,6 +306,12 @@ static void tcp_recv(int fd, short event, void *arg)
         if (rv < 0 && errno == EAGAIN) {
             /* We were awoken but have no data to read, so we do
              * nothing */
+            return;
+        } else if (rv == -1 && errno == ETIMEDOUT) {
+            /*
+             * network unreachable
+             * may be reachable later, don't do anything
+             */
             return;
         } else if (rv <= 0) {
             /* Orderly shutdown or error; close the file

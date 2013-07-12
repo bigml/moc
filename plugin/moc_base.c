@@ -7,11 +7,19 @@ static struct base_info *m_base = NULL;
 NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q)
 {
     char *uid;
+    NEOERR *err;
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
     base_user_quit(binfo, uid, q, NULL);
     base_user_new(binfo, uid, q, NULL, NULL);
+
+    hdf_set_value(q->hdfsnd, "success", "1");
+
+    if (!(q->req->flags & FLAGS_SYNC)) {
+        err = base_msg_touser("login", q->hdfsnd, q->req->fd);
+        if (err != STATUS_OK) return nerr_pass(err);
+    }
 
     return STATUS_OK;
 }
@@ -19,11 +27,19 @@ NEOERR* base_cmd_join(struct base_info *binfo, QueueEntry *q)
 NEOERR* base_cmd_quit(struct base_info *binfo, QueueEntry *q)
 {
     char *uid;
+    NEOERR *err;
 
     REQ_GET_PARAM_STR(q->hdfrcv, "userid", uid);
 
     base_user_quit(binfo, uid, NULL, NULL);
     
+    hdf_set_value(q->hdfsnd, "success", "1");
+
+    if (!(q->req->flags & FLAGS_SYNC)) {
+        err = base_msg_touser("logout", q->hdfsnd, q->req->fd);
+        if (err != STATUS_OK) return nerr_pass(err);
+    }
+
     return STATUS_OK;
 }
 
@@ -67,6 +83,9 @@ static void base_process_driver(EventEntry *entry, QueueEntry *q)
             st->msg_badparam++;
         }
         TRACE_ERR(q, ret, err);
+        if (!(q->req->flags & FLAGS_SYNC)) {
+            base_msg_touser("error", q->hdfsnd, q->req->fd);
+        }
     }
     if (q->req->flags & FLAGS_SYNC) {
         reply_trigger(q, ret);
