@@ -76,7 +76,7 @@ static void* el_routine(void *arg)
                     /*
                      * We were awoken but have no data to read, so we do nothing
                      */
-                    continue;
+                    goto next;
                 } else if (rv == -1 && errno == ETIMEDOUT) {
                     /*
                      * network unreachable
@@ -91,7 +91,7 @@ static void* el_routine(void *arg)
                         mssync_unlock(&earg->callbacksync);
                         mssync_signal(&earg->callbacksync);
                     }
-                    continue;
+                    goto next;
                 } else if (rv <= 0) {
                     /*
                      * Orderly shutdown or error;
@@ -101,7 +101,7 @@ static void* el_routine(void *arg)
                     if (evt) mssrv_close(evt, conn[i].order, conn[i].fd);
 
                     conn[i].fd = -1;
-                    continue;
+                    goto next;
                 }
 
                 evt = hash_lookup(evth, conn[i].name);
@@ -111,7 +111,7 @@ static void* el_routine(void *arg)
                     if (!srv) {
                         mtc_err("%s out of order %d %d",
                                 conn[i].name, conn[i].order, evt->nservers);
-                        continue;
+                        goto next;
                     }
                     if (srv->buf == NULL)
                         msparse_buf(evt, conn[i].order, conn[i].fd,
@@ -124,7 +124,8 @@ static void* el_routine(void *arg)
                     }
                 }
             }
-            
+
+        next:
             if (conn[i].name) free(conn[i].name);
         }
 
