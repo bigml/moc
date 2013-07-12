@@ -96,25 +96,25 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
     return STATUS_OK;
 }
 
-static void _moc_destroy(moc_arg *arg)
+static void _moc_destroy(moc_arg *arg, bool eventloop)
 {
     char *key = NULL;
     HASH *table;
 
     if (!arg) return;
 
-#ifdef EVENTLOOP
-    eloop_stop(arg);
-    mcbk_stop(arg);
+    if (eventloop) {
+        eloop_stop(arg);
+        mcbk_stop(arg);
 
-    table = arg->cbkh;
-    struct moc_cbk *c = hash_next(table, (void**)&key);
-    while (c) {
-        mcbk_destroy(c);
+        table = arg->cbkh;
+        struct moc_cbk *c = hash_next(table, (void**)&key);
+        while (c) {
+            mcbk_destroy(c);
         
-        c = hash_next(table, (void**)&key);
+            c = hash_next(table, (void**)&key);
+        }
     }
-#endif
 
     key = NULL;
     table = arg->evth;
@@ -240,7 +240,7 @@ static NEOERR* _moc_set_param_float(moc_arg *arg, char *module, char *key, float
 }
 
 static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cmd,
-                        unsigned short flags)
+                        unsigned short flags, bool eventloop)
 {
     size_t t, ksize, vsize;
     moc_srv *srv;
@@ -309,47 +309,45 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     hdf_destroy(&evt->hdfrcv);
     hdf_init(&evt->hdfrcv);
 
-#ifdef EVENTLOOP
-    if (!(flags & FLAGS_SYNC)) return REP_OK;
+    if (eventloop) {
+        if (!(flags & FLAGS_SYNC)) return REP_OK;
     
-    struct timespec ts;
-    mutil_utc_time(&ts);
-    if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
-    ts.tv_sec += srv->tv.tv_sec;
-//    if(srv->tv.tv_usec > 1000000) srv->tv.tv_usec = 900000;
-//    ts.tv_nsec += srv->tv.tv_usec * 1000;
+        struct timespec ts;
+        mutil_utc_time(&ts);
+        if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
+        ts.tv_sec += srv->tv.tv_sec;
+        /* TODO srv->tv_usec */
     
-    mssync_lock(&(arg->mainsync));
-    int ret = mssync_timedwait(&(arg->mainsync), &ts);
-    if (ret != 0) {
-        if (ret == ETIMEDOUT) {
-            mssync_unlock(&arg->mainsync);
-            hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
-        } else {
-            hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
+        mssync_lock(&(arg->mainsync));
+        int ret = mssync_timedwait(&(arg->mainsync), &ts);
+        if (ret != 0) {
+            if (ret == ETIMEDOUT) {
+                mssync_unlock(&arg->mainsync);
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+            } else {
+                hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
+            }
+            return REP_ERR;
         }
-        return REP_ERR;
-    }
-    mssync_unlock(&(arg->mainsync));
+        mssync_unlock(&(arg->mainsync));
 
-    return REP_OK;
-#else
-    
-    if (flags & FLAGS_SYNC) {
-        vsize = 0;
-        rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
-        if (rv == -1) {
-            hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
-            rv = REP_ERR;
-        }
-        evt->errcode = rv;
+        return REP_OK;
+    } else {
+        if (flags & FLAGS_SYNC) {
+            vsize = 0;
+            rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
+            if (rv == -1) {
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+                rv = REP_ERR;
+            }
+            evt->errcode = rv;
 
-        if (vsize > 8) {
-            /* reply_long add a vsize parameter */
-            unpack_hdf(p+4, vsize-4, &evt->hdfrcv);
+            if (vsize > 8) {
+                /* reply_long add a vsize parameter */
+                unpack_hdf(p+4, vsize-4, &evt->hdfrcv);
+            }
         }
     }
-#endif
     
     return rv;
 }
@@ -458,7 +456,7 @@ NEOERR* moc_init_fromhdf(HDF *node, char *path)
 
 void moc_destroy()
 {
-    _moc_destroy(m_arg);
+    _moc_destroy(m_arg, true);
     m_arg = NULL;
 }
 
@@ -494,7 +492,7 @@ NEOERR* moc_set_param_float(char *module, char *key, float val)
 int moc_trigger(char *module, char *key, unsigned short cmd,
                   unsigned short flags)
 {
-    return _moc_trigger(m_arg, module, key, cmd, flags);
+    return _moc_trigger(m_arg, module, key, cmd, flags, true);
 }
 
 HDF* moc_hdfrcv(char *module)
@@ -558,7 +556,7 @@ NEOERR* moc_init_fromhdf_r(HDF *node, moc_arg **arg)
 
 void moc_destroy_r(moc_arg *arg)
 {
-    _moc_destroy(arg);
+    _moc_destroy(arg, false);
 }
 
 HDF* moc_hdfsnd_r(moc_arg *arg, char *module)
@@ -590,7 +588,7 @@ NEOERR* moc_set_param_float_r(moc_arg *arg, char *module, char *key, float val)
 int moc_trigger_r(moc_arg *arg, char *module, char *key, unsigned short cmd,
                   unsigned short flags)
 {
-    return _moc_trigger(arg, module, key, cmd, flags);
+    return _moc_trigger(arg, module, key, cmd, flags, false);
 }
 
 HDF* moc_hdfrcv_r(moc_arg *arg, char *module)
