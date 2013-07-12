@@ -77,9 +77,10 @@ static void* el_routine(void *arg)
                      * We were awoken but have no data to read, so we do nothing
                      */
                     continue;
-                } else if (rv == -1 && errno == ETIMEOUT) {
+                } else if (rv == -1 && errno == ETIMEDOUT) {
                     /*
                      * network unreachable
+                     * may be reachable later, notify user
                      */
                     struct msqueue_entry *e = msqueue_entry_create();
                     if (e) {
