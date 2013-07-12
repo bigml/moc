@@ -225,6 +225,7 @@ int tcp_srv_send(moc_srv *srv, unsigned char *buf, size_t bsize, moc_arg *arg)
         mssync_lock(&arg->callbacksync);
         msqueue_put(arg->callbackqueue, e);
         mssync_unlock(&arg->callbacksync);
+        mssync_signal(&arg->callbacksync);
 
         if (reconnectok) {
             /*

@@ -77,6 +77,20 @@ static void* el_routine(void *arg)
                      * We were awoken but have no data to read, so we do nothing
                      */
                     continue;
+                } else if (rv == -1 && errno == ETIMEOUT) {
+                    /*
+                     * network unreachable
+                     */
+                    struct msqueue_entry *e = msqueue_entry_create();
+                    if (e) {
+                        e->ename = strdup(conn[i].name);
+                        e->cmd = strdup("_connectlost");
+                        mssync_lock(&earg->callbacksync);
+                        msqueue_put(earg->callbackqueue, e);
+                        mssync_unlock(&earg->callbacksync);
+                        mssync_signal(&earg->callbacksync);
+                    }
+                    continue;
                 } else if (rv <= 0) {
                     /*
                      * Orderly shutdown or error;
