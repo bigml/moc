@@ -107,5 +107,6 @@ void mcbk_regist(HASH *cbkh, char *module, char *cmd, struct moc_cbk *c)
 
     mtc_dbg("regist %s in cbkh", tok);
 
+    hash_remove(cbkh, tok);
     hash_insert(cbkh, (void*)strdup(tok), (void*)c);
 }

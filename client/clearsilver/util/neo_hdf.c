@@ -559,7 +559,7 @@ NEOERR* _hdf_hash_level(HDF *hdf)
   NEOERR *err;
   HDF *child;
 
-  err = ne_hash_init(&(hdf->hash), hash_hdf_hash, hash_hdf_comp);
+  err = ne_hash_init(&(hdf->hash), hash_hdf_hash, hash_hdf_comp, NULL);
   if (err) return nerr_pass(err);
 
   child = hdf->child;

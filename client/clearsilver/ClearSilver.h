@@ -30,6 +30,7 @@
 #define hash_next ne_hash_next
 #define hash_str_comp ne_hash_str_comp
 #define hash_str_hash ne_hash_str_hash
+#define hash_str_free ne_hash_str_free
 #endif /* CS_COMPAT */
 
 #include <stdlib.h>

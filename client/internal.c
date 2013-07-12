@@ -26,8 +26,8 @@ moc_arg* mocarg_init()
     moc_arg *arg = calloc(1, sizeof(moc_arg));
     if (!arg) return NULL;
 
-    hash_init(&arg->evth, hash_str_hash, hash_str_comp);
-    hash_init(&arg->cbkh, hash_str_hash, hash_str_comp);
+    hash_init(&arg->evth, hash_str_hash, hash_str_comp, hash_str_free);
+    hash_init(&arg->cbkh, hash_str_hash, hash_str_comp, hash_str_free);
 
 #ifdef EVENTLOOP
     mssync_create(&(arg->mainsync));

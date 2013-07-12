@@ -19,6 +19,7 @@ __BEGIN_DECLS
 
 typedef UINT32 (*NE_HASH_FUNC)(const void *);
 typedef int (*NE_COMP_FUNC)(const void *, const void *);
+typedef void (*NE_DESTROY_FUNC)(void *node);
 
 typedef struct _NE_HASHNODE
 {
@@ -36,9 +37,11 @@ typedef struct _HASH
   NE_HASHNODE **nodes;
   NE_HASH_FUNC hash_func;
   NE_COMP_FUNC comp_func;
+  NE_DESTROY_FUNC destroy_func;
 } NE_HASH;
 
-NEOERR *ne_hash_init (NE_HASH **hash, NE_HASH_FUNC hash_func, NE_COMP_FUNC comp_func);
+NEOERR *ne_hash_init (NE_HASH **hash, NE_HASH_FUNC hash_func,
+                      NE_COMP_FUNC comp_func, NE_DESTROY_FUNC destroy_func);
 void ne_hash_destroy (NE_HASH **hash);
 NEOERR *ne_hash_insert(NE_HASH *hash, void *key, void *value);
 void *ne_hash_lookup(NE_HASH *hash, void *key);
@@ -48,6 +51,7 @@ void *ne_hash_next(NE_HASH *hash, void **key);
 
 int ne_hash_str_comp(const void *a, const void *b);
 UINT32 ne_hash_str_hash(const void *a);
+void ne_hash_str_free(void *a);
 
 int ne_hash_int_comp(const void *a, const void *b);
 UINT32 ne_hash_int_hash(const void *a);

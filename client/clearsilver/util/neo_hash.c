@@ -21,7 +21,8 @@
 static NEOERR *_hash_resize(NE_HASH *hash);
 static NE_HASHNODE **_hash_lookup_node (NE_HASH *hash, void *key, UINT32 *hashv);
 
-NEOERR *ne_hash_init (NE_HASH **hash, NE_HASH_FUNC hash_func, NE_COMP_FUNC comp_func)
+NEOERR *ne_hash_init (NE_HASH **hash, NE_HASH_FUNC hash_func,
+                      NE_COMP_FUNC comp_func, NE_DESTROY_FUNC destroy_func)
 {
   NE_HASH *my_hash = NULL;
 
@@ -33,6 +34,7 @@ NEOERR *ne_hash_init (NE_HASH **hash, NE_HASH_FUNC hash_func, NE_COMP_FUNC comp_
   my_hash->num = 0;
   my_hash->hash_func = hash_func;
   my_hash->comp_func = comp_func;
+  my_hash->destroy_func = destroy_func;
 
   my_hash->nodes = (NE_HASHNODE **) calloc (my_hash->size, sizeof(NE_HASHNODE *));
   if (my_hash->nodes == NULL)
@@ -63,6 +65,7 @@ void ne_hash_destroy (NE_HASH **hash)
     while (node)
     {
       next = node->next;
+      if (my_hash->destroy_func) my_hash->destroy_func(node);
       free(node);
       node = next;
     }
@@ -120,6 +123,7 @@ void *ne_hash_remove(NE_HASH *hash, void *key)
     rem = *node;
     *node = rem->next;
     value = rem->value;
+    if (hash->destroy_func) hash->destroy_func(rem);
     free(rem);
     hash->num--;
   }
@@ -279,6 +283,14 @@ int ne_hash_str_comp(const void *a, const void *b)
 UINT32 ne_hash_str_hash(const void *a)
 {
   return ne_crc((unsigned char *)a, strlen((const char *)a));
+}
+
+void ne_hash_str_free(void *a)
+{
+  NE_HASHNODE *node = a;
+  if (node) {
+      free(node->key);
+  }
 }
 
 int ne_hash_int_comp(const void *a, const void *b)
