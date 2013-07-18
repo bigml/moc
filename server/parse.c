@@ -123,6 +123,7 @@ static int put_in_queue_long(const struct req_info *req, int sync,
     else queue_put(entry->op_queue, e);
     queue_unlock(entry->op_queue);
 
+#if 0
     if (sync) {
         /* Signal the app thread it has work only if it's a
          * synchronous operation, asynchronous don't mind
@@ -131,7 +132,16 @@ static int put_in_queue_long(const struct req_info *req, int sync,
          * "test2d 100000 10 10"). */
         queue_signal(entry->op_queue);
     }
+#endif
 
+    /*
+     * TEMP
+     * Always signal the app thread
+     * Because current moc client SYNC mode will block the main thread
+     * Caller always used the ASYNC mode and expect response as soon as possible
+     */
+    queue_signal(entry->op_queue);
+    
     return 1;
 }
 
