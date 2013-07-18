@@ -233,7 +233,7 @@ static NEOERR* msparse_msg(moc_srv *srv, unsigned char *buf, size_t len, moc_arg
             if (rv <= 0)
                 return nerr_raise(NERR_ASSERT, "server responsed illegal message");
 
-            TRACE_HDF(srv->evt->hdfrcv);
+            //TRACE_HDF(srv->evt->hdfrcv);
         }
 
         /*
