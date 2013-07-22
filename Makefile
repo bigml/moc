@@ -1,7 +1,7 @@
 BASEDIR = ../moon/
 include $(BASEDIR)Make.env
 
-SUBDIR = server plugin client demo conf
+SUBDIR = client server plugin demo conf
 
 all: $(subdir)
 	@$(MULTIMAKE) $(SUBDIR)

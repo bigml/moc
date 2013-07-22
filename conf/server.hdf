@@ -12,6 +12,30 @@ Server {
     }
 }
 
+Client {
+    modules {
+        base {
+            0 {
+                ip = 172.10.7.204
+                port = 5000
+    #           non_block = 1
+                timeout_s = 0
+                timeout_u = 800000
+            }
+        }
+    
+        chat {
+            0 {
+                ip = 172.10.7.204
+                port = 5000
+                timeout_s = 0
+                timeout_u = 800000
+            }
+    
+        }
+    }
+}
+
 Plugin {
     base {
         dbsn = pgsql:dbname=merry host=localhost user=dida password=loveu

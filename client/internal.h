@@ -130,6 +130,8 @@ extern unsigned int g_reqid;
  */
 moc_arg *mocarg_init();
 void mocarg_destroy(moc_arg *arg);
+moc_t* mevt_create(char *name);
+void mevt_destroy(void *e);
 
 int compare_servers(const void *s1, const void *s2);
 moc_srv *select_srv(moc_t *evt, const char *key, size_t ksize);

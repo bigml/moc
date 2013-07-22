@@ -13,7 +13,7 @@ static int add_tcp_server_addr(moc_t *evt, in_addr_t *inetaddr, int port,
         int x = fcntl(fd, F_GETFL, 0);
         fcntl(fd, F_SETFL, x | O_NONBLOCK);
     } else {
-        if (tv->tv_sec != 0 || tv->tv_usec != 0) {
+        if (tv && (tv->tv_sec != 0 || tv->tv_usec != 0)) {
             setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (char*)tv, sizeof(*tv));
             setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char*)tv, sizeof(*tv));
         }
@@ -35,8 +35,10 @@ static int add_tcp_server_addr(moc_t *evt, in_addr_t *inetaddr, int port,
     newsrv->srvsa.sin_port = htons(port);
     newsrv->srvsa.sin_addr.s_addr = *inetaddr;
     newsrv->nblock = nblock;
-    newsrv->tv.tv_sec = tv->tv_sec;
-    newsrv->tv.tv_usec = tv->tv_usec;
+    if (tv) {
+        newsrv->tv.tv_sec = tv->tv_sec;
+        newsrv->tv.tv_usec = tv->tv_usec;
+    }
     newsrv->evt = evt;
 
     newsrv->buf = NULL;

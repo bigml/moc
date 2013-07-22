@@ -4,6 +4,17 @@ Config {
     trace_level = 7
 }
 
+_netmodules {
+    0 {
+        host = 172.10.7.204
+        port = 5000
+    }
+    1 {
+        host = x-bak.mangoq.com
+        port = 5000
+    }
+}
+
 modules {
     base {
         0 {

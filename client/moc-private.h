@@ -33,6 +33,7 @@ enum {
     REQ_CMD_CACHE_SET,
     REQ_CMD_CACHE_DEL,
     REQ_CMD_CACHE_EMPTY,
+    REQ_CMD_CONFIG_GET = 200,   /* Get Config information from network */
     REQ_CMD_STATS = 1000        /* MAX system command is 1000 */
 };
 

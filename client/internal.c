@@ -57,6 +57,56 @@ void mocarg_destroy(moc_arg *arg)
     free(arg);
 }
 
+moc_t* mevt_create(char *name)
+{
+    moc_t *evt;
+    
+    if (!name) return NULL;
+
+    evt = calloc(1, sizeof(moc_t));
+    if (!evt) return NULL;
+
+    evt->ename = strdup(name);
+
+    hdf_init(&evt->hdfrcv);
+    hdf_init(&evt->hdfsnd);
+    evt->rcvbuf = calloc(1, MAX_PACKET_LEN);
+    evt->payload = calloc(1, MAX_PACKET_LEN);
+    if (!evt->payload || !evt->rcvbuf) goto error;
+
+    return evt;
+
+error:
+    if (evt->ename) free(evt->ename);
+    hdf_destroy(&evt->hdfrcv);
+    hdf_destroy(&evt->hdfsnd);
+    if (evt->rcvbuf) free(evt->rcvbuf);
+    if (evt->payload) free(evt->payload);
+    
+    return NULL;
+}
+
+void mevt_destroy(void *e)
+{
+    moc_t *evt = e;
+
+    if (!evt) return;
+    
+    for (int i = 0; i < evt->nservers; i++) {
+        if (evt->servers[i].buf) free(evt->servers[i].buf);
+        close(evt->servers[i].fd);
+    }
+    if (evt->servers) free(evt->servers);
+        
+    if (evt->ename) free(evt->ename);
+    if (evt->rcvbuf) free(evt->rcvbuf);
+    if (evt->payload) free(evt->payload);
+    hdf_destroy(&evt->hdfrcv);
+    hdf_destroy(&evt->hdfsnd);
+        
+    free(evt);
+}
+
 /*
  * Like recv(), but either fails, or returns a complete read; if we return
  * less than count is because EOF was reached.

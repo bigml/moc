@@ -7,6 +7,111 @@ static moc_arg *m_arg = NULL;
  * local
  * =====
  */
+static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
+                         unsigned short flags, bool eventloop, moc_arg *arg)
+{
+    size_t t, ksize, vsize;
+    moc_srv *srv;
+    unsigned char *p;
+    uint32_t rv = REP_OK;
+    
+    if (!evt) return REP_ERR;
+    if (eventloop && !arg) return REP_ERR;
+    
+    mtc_dbg("trigger cmd %d with %d flags on event %s %s", cmd, flags, evt->ename, key);
+
+    evt->cmd = cmd;
+    evt->flags = flags;
+    ksize = strlen(evt->ename);
+
+    if (key) {
+        srv = select_srv(evt, key, strlen(key));
+    } else {
+        srv = &(evt->servers[0]);
+    }
+
+    if (g_reqid++ > 0x0FFFFFFC) {
+        g_reqid = 1;
+    }
+
+    p = evt->payload + TCP_MSG_OFFSET;
+    * (uint32_t *) p = htonl( (PROTO_VER << 28) | g_reqid );
+    * ((uint16_t *) p + 2) = htons(cmd);
+    * ((uint16_t *) p + 3) = htons(flags);
+    * ((uint32_t *) p + 2) = htonl(ksize);
+    memcpy(p+12, evt->ename, ksize);
+
+    evt->psize = TCP_MSG_OFFSET + 12 + ksize;
+    
+    /*
+     * don't escape the hdf because some body need set ' in param 
+     */
+    vsize = pack_hdf(evt->hdfsnd, evt->payload + evt->psize, MAX_PACKET_LEN);
+    evt->psize += vsize;
+
+    if (evt->psize < 17) {
+        * (uint32_t *) (evt->payload+evt->psize) = htonl(DATA_TYPE_EOF);
+        evt->psize += sizeof(uint32_t);
+    }
+    
+    t = tcp_srv_send(srv, evt->payload, evt->psize, arg);
+    if (t <= 0) {
+        evt->errcode = REP_ERR_SEND;
+        return REP_ERR_SEND;
+    }
+
+    /*
+     * application should make sure call moc_trigger() in turn
+     * or, the evt->hdfrcv is untrustable
+     */
+    hdf_destroy(&evt->hdfsnd);
+    hdf_init(&evt->hdfsnd);
+    hdf_destroy(&evt->hdfrcv);
+    hdf_init(&evt->hdfrcv);
+
+    if (eventloop) {
+        if (!(flags & FLAGS_SYNC)) return REP_OK;
+    
+        struct timespec ts;
+        mutil_utc_time(&ts);
+        if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
+        ts.tv_sec += srv->tv.tv_sec;
+        /* TODO srv->tv_usec */
+    
+        mssync_lock(&(arg->mainsync));
+        int ret = mssync_timedwait(&(arg->mainsync), &ts);
+        if (ret != 0) {
+            if (ret == ETIMEDOUT) {
+                mssync_unlock(&arg->mainsync);
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+            } else {
+                hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
+            }
+            return REP_ERR;
+        }
+        mssync_unlock(&(arg->mainsync));
+
+        return REP_OK;
+    } else {
+        if (flags & FLAGS_SYNC) {
+            vsize = 0;
+            rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
+            if (rv == -1) {
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+                rv = REP_ERR;
+            }
+            evt->errcode = rv;
+
+            if (vsize > 8) {
+                /* reply_long add a vsize parameter */
+                unpack_hdf(p+4, vsize-4, &evt->hdfrcv);
+            }
+        }
+    }
+    
+    return rv;
+}
+
 static HDF* _moc_get_confhdf(char *path)
 {
     HDF *cfg;
@@ -35,38 +140,63 @@ static HDF* _moc_get_confhdf(char *path)
     
     lerr_init();
 
-    return hdf_get_obj(cfg, "modules");
+    return cfg;
 }
 
 static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
 {
     HDF *node, *cnode;
+    moc_t *nevt = NULL, *evt;
 
     MOC_NOT_NULLB(pnode, evth);
     
+    /*
+     * network modules
+     */
+    node = hdf_get_child(pnode, "_netmodules");
+    while (node) {
+        nevt = mevt_create("_Reserve.Clientmod");
+        if (!nevt) return nerr_raise(NERR_NOMEM, "memory gone");
+
+        char *host = hdf_get_value(node, "host", NULL);
+        int port = hdf_get_int_value(node, "port", 5000);
+
+        mtc_dbg("get config from %s %d", host, port);
+        
+        if (moc_add_tcp_server(nevt, host, port, false, NULL)) {
+            _mevt_trigger(nevt, NULL, REQ_CMD_CONFIG_GET, FLAGS_SYNC, false, NULL);
+            if (PROCESS_OK(nevt->errcode)) {
+                pnode = hdf_get_obj(nevt->hdfrcv, "modules");
+                goto localmodule;
+            } else {
+                mtc_err("get config failure %d %s %d", nevt->errcode, host, port);
+            }
+        } else {
+            mtc_err("connect to config server %s %d failure", host, port);
+        }
+
+        mevt_destroy(nevt);
+        node = hdf_obj_next(node);
+    }
+
+localmodule:
+    if (hdf_get_obj(pnode, "modules")) pnode = hdf_get_obj(pnode, "modules");
+    
+    /*
+     * local modules
+     */
     node = hdf_obj_child(pnode);
     while (node) {
         /*
          *per backend module
          */
-        moc_t *evt;
-        char *mname;
-
-        mname = hdf_obj_name(node);
+        char *mname = hdf_obj_name(node);
 
         mtc_dbg("init event %s", mname);
-        
-        evt = calloc(1, sizeof(moc_t));
+
+        evt = mevt_create(mname);
         if (!evt) return nerr_raise(NERR_NOMEM, "memory gone");
 
-        evt->ename = strdup(mname);
-
-        hdf_init(&evt->hdfrcv);
-        hdf_init(&evt->hdfsnd);
-        evt->rcvbuf = calloc(1, MAX_PACKET_LEN);
-        evt->payload = calloc(1, MAX_PACKET_LEN);
-        if (!evt->payload || !evt->rcvbuf) return nerr_raise(NERR_NOMEM, "memory gone");
-        
         cnode = hdf_obj_child(node);
         while (cnode) {
             /*
@@ -92,6 +222,8 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
 
         node = hdf_obj_next(node);
     }
+
+    mevt_destroy(nevt);
 
     return STATUS_OK;
 }
@@ -120,19 +252,7 @@ static void _moc_destroy(moc_arg *arg, bool eventloop)
     table = arg->evth;
     moc_t *evt = (moc_t*)hash_next(table, (void**)&key);
     while (evt != NULL) {
-        for (int i = 0; i < evt->nservers; i++) {
-            if (evt->servers[i].buf) free(evt->servers[i].buf);
-            close(evt->servers[i].fd);
-        }
-        if (evt->servers) free(evt->servers);
-        
-        if (evt->ename) free(evt->ename);
-        if (evt->rcvbuf) free(evt->rcvbuf);
-        if (evt->payload) free(evt->payload);
-        hdf_destroy(&evt->hdfrcv);
-        hdf_destroy(&evt->hdfsnd);
-        
-        free(evt);
+        mevt_destroy(evt);
         
         evt = hash_next(table, (void**)&key);
     }
@@ -242,11 +362,7 @@ static NEOERR* _moc_set_param_float(moc_arg *arg, char *module, char *key, float
 static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cmd,
                         unsigned short flags, bool eventloop)
 {
-    size_t t, ksize, vsize;
-    moc_srv *srv;
-    unsigned char *p;
     moc_t *evt;
-    uint32_t rv = REP_OK;
 
     if (!arg || !module) return REP_ERR;
 
@@ -258,98 +374,7 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
         return REP_ERR;
     }
 
-    mtc_dbg("trigger cmd %d with %d flags on event %s %s", cmd, flags, module, key);
-
-    evt->cmd = cmd;
-    evt->flags = flags;
-    ksize = strlen(module);
-
-    if (key) {
-        srv = select_srv(evt, key, strlen(key));
-    } else {
-        srv = &(evt->servers[0]);
-    }
-
-    if (g_reqid++ > 0x0FFFFFFC) {
-        g_reqid = 1;
-    }
-
-    p = evt->payload + TCP_MSG_OFFSET;
-    * (uint32_t *) p = htonl( (PROTO_VER << 28) | g_reqid );
-    * ((uint16_t *) p + 2) = htons(cmd);
-    * ((uint16_t *) p + 3) = htons(flags);
-    * ((uint32_t *) p + 2) = htonl(ksize);
-    memcpy(p+12, evt->ename, ksize);
-
-    evt->psize = TCP_MSG_OFFSET + 12 + ksize;
-    
-    /*
-     * don't escape the hdf because some body need set ' in param 
-     */
-    vsize = pack_hdf(evt->hdfsnd, evt->payload + evt->psize, MAX_PACKET_LEN);
-    evt->psize += vsize;
-
-    if (evt->psize < 17) {
-        * (uint32_t *) (evt->payload+evt->psize) = htonl(DATA_TYPE_EOF);
-        evt->psize += sizeof(uint32_t);
-    }
-    
-    t = tcp_srv_send(srv, evt->payload, evt->psize, arg);
-    if (t <= 0) {
-        evt->errcode = REP_ERR_SEND;
-        return REP_ERR_SEND;
-    }
-
-    /*
-     * application should make sure call moc_trigger() in turn
-     * or, the evt->hdfrcv is untrustable
-     */
-    hdf_destroy(&evt->hdfsnd);
-    hdf_init(&evt->hdfsnd);
-    hdf_destroy(&evt->hdfrcv);
-    hdf_init(&evt->hdfrcv);
-
-    if (eventloop) {
-        if (!(flags & FLAGS_SYNC)) return REP_OK;
-    
-        struct timespec ts;
-        mutil_utc_time(&ts);
-        if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
-        ts.tv_sec += srv->tv.tv_sec;
-        /* TODO srv->tv_usec */
-    
-        mssync_lock(&(arg->mainsync));
-        int ret = mssync_timedwait(&(arg->mainsync), &ts);
-        if (ret != 0) {
-            if (ret == ETIMEDOUT) {
-                mssync_unlock(&arg->mainsync);
-                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
-            } else {
-                hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
-            }
-            return REP_ERR;
-        }
-        mssync_unlock(&(arg->mainsync));
-
-        return REP_OK;
-    } else {
-        if (flags & FLAGS_SYNC) {
-            vsize = 0;
-            rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
-            if (rv == -1) {
-                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
-                rv = REP_ERR;
-            }
-            evt->errcode = rv;
-
-            if (vsize > 8) {
-                /* reply_long add a vsize parameter */
-                unpack_hdf(p+4, vsize-4, &evt->hdfrcv);
-            }
-        }
-    }
-    
-    return rv;
+    return _mevt_trigger(evt, key, cmd, flags, eventloop, arg);
 }
 
 HDF* _moc_hdfrcv(moc_arg *arg, char *module)
@@ -425,7 +450,6 @@ NEOERR* moc_init(char *path)
     if (err != STATUS_OK) return nerr_pass(err);
 #endif
 
-    node = hdf_obj_top(node);
     hdf_destroy(&node);
 
     return STATUS_OK;
@@ -531,7 +555,6 @@ NEOERR* moc_init_r(char *path, moc_arg **arg)
     err = _moc_load_fromhdf(node, rarg->evth);
     if (err != STATUS_OK) return nerr_pass(err);
 
-    node = hdf_obj_top(node);
     hdf_destroy(&node);
 
     return STATUS_OK;

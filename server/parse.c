@@ -17,6 +17,19 @@ static void parse_stats(struct queue_entry *q)
     return;
 }
 
+static void parse_clientmod(struct queue_entry *q)
+{
+    HDF *node = hdf_get_obj(g_cfg, "Client.modules");
+    //unsigned short cmd = q->req->cmd;
+    
+    if (node) {
+        hdf_copy(q->hdfsnd, "modules", node);
+        reply_trigger(q, REP_OK);
+    } else q->req->reply_mini(q->req, REP_ERR_UNKREQ);
+    
+    return;
+}
+
 
 /* Create a queue entry structure based on the parameters passed. Memory
  * allocated here will be free()'d in queue_entry_free(). It's not the
@@ -83,13 +96,21 @@ static int put_in_queue_long(const struct req_info *req, int sync,
 
     struct event_entry *entry = find_entry_in_table(g_moc, ename, esize);
     if (entry == NULL) {
-        if (!strncmp((char*)ename, "Reserve.Status", esize)) {
-            /* TODO e freed? */
+        if (!strncmp((char*)ename, "_Reserve.Status", esize)) {
             e = make_queue_long_entry(req, ename, esize, hdfrcv);
             if (e == NULL) {
                 return 0;
             }
             parse_stats(e);
+            queue_entry_free(e);
+            return 1;
+        } else if (!strncmp((char*)ename, "_Reserve.Clientmod", esize)) {
+            e = make_queue_long_entry(req, ename, esize, hdfrcv);
+            if (e == NULL) {
+                return 0;
+            }
+            parse_clientmod(e);
+            queue_entry_free(e);
             return 1;
         }
         hdf_destroy(&hdfrcv);
@@ -157,7 +178,7 @@ static int put_in_queue(const struct req_info *req, int sync,
 
 #define FILL_SYNC_FLAG()                        \
     do {                                        \
-        sync = req->flags & FLAGS_SYNC;            \
+        sync = req->flags & FLAGS_SYNC;         \
     } while(0)
 
 static void parse_event(struct req_info *req)

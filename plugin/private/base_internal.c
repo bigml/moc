@@ -12,7 +12,7 @@ NEOERR* base_info_init(struct base_info **binfo)
         struct base_info *linfo = calloc(1, sizeof(struct base_info));
         if (!linfo) return nerr_raise(NERR_NOMEM, "alloc base failure");
         linfo->usernum = 0;
-        err = hash_init(&linfo->userh, hash_str_hash, hash_str_comp);
+        err = hash_init(&linfo->userh, hash_str_hash, hash_str_comp, NULL);
         if (err != STATUS_OK) return nerr_pass(err);
 
         *binfo = linfo;
