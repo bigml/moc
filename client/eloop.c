@@ -60,8 +60,8 @@ static void* el_routine(void *arg)
             }
         }
 
-        tv.tv_sec = 2;
-        tv.tv_usec = 0;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000;
         select(maxfd + 1, &readset, NULL, NULL, &tv);
 
         for (int i = 0; i < num_conn; i++) {

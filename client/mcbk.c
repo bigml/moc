@@ -15,7 +15,8 @@ static void* callback_routine(void *arg)
 
     for (;;) {
         mutil_utc_time(&ts);
-        ts.tv_sec += 1;
+        //ts.tv_sec += 1;
+        ts.tv_nsec += 100000;
         rv = 0;
 
         mssync_lock(&earg->callbacksync);
