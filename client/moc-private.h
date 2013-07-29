@@ -8,7 +8,7 @@
 #include <string.h>        /* memcpy() */
 #include <arpa/inet.h>      /* htonls() and friends */
 
-#include "ClearSilver.h"
+#include "clearsilver/ClearSilver.h"
 
 #include "lerr.h"
 #include "packet.h"

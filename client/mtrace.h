@@ -9,7 +9,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "ClearSilver.h"
+#include "clearsilver/ClearSilver.h"
 
 __BEGIN_DECLS
 

@@ -62,12 +62,15 @@
 
 #include <sys/types.h>     /* socket defines */
 #include <sys/socket.h>
-
 #include <arpa/inet.h>      /* htonls() and friends */
 #include <netinet/tcp.h>    /* TCP stuff */
 
+#ifdef EVENTLOOP
+#include <pthread.h>        /* for pthread_t */
+#include <sys/select.h>     /* select() */
+#endif
 
-#include "ClearSilver.h"
+#include "clearsilver/ClearSilver.h"
 #include "mtrace.h"          /* trace */
 #include "moc-private.h"     /* client&server's public lib */
 #include "internal.h"        /* client internal */
@@ -75,8 +78,6 @@
 #include "moc-trigger.h"
 
 #ifdef EVENTLOOP
-#include <pthread.h>        /* for pthread_t */
-#include <sys/select.h>     /* select() */
 #include "eloop.h"
 #include "mcbk.h"
 #include "mscli.h"          /* process moc server to client stuff */
