@@ -15,8 +15,13 @@ static void* callback_routine(void *arg)
 
     for (;;) {
         mutil_utc_time(&ts);
-        //ts.tv_sec += 1;
-        ts.tv_nsec += 100000;
+
+        if (ts.tv_nsec >= 900000000) {
+            ts.tv_sec += 1;
+            ts.tv_nsec = abs((ts.tv_nsec + 100000000) - 1000000000);
+        } else {
+            ts.tv_nsec += 100000000;
+        }
         rv = 0;
 
         mssync_lock(&earg->callbacksync);
