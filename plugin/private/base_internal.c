@@ -115,7 +115,8 @@ bool base_user_quit(struct base_info *binfo, char *uid,
     mtc_dbg("%s %s %d quit", user->uid, user->ip, user->port);
 
     tcp_socket_remove_ref(user->tcpsock);
-    user->tcpsock = NULL;
+    /* user may be destroied by remove_ref(), so, don't write */
+    //user->tcpsock = NULL;
 
     return true;
 }
