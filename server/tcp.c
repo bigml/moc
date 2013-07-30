@@ -17,8 +17,19 @@ static void tcp_reply_long(const struct req_info *req, uint32_t reply,
 
 void tcp_socket_free(struct tcp_socket *tcpsock)
 {
-    if (tcpsock->evt)
+    if (!tcpsock) return;
+    
+    //mtc_dbg("destroy tcpsock %d", tcpsock->fd);
+    
+    if (tcpsock->fd > 0) {
+        close(tcpsock->fd);
+        tcpsock->fd = -1;
+    }
+    if (tcpsock->evt) {
+        event_del(tcpsock->evt);
         free(tcpsock->evt);
+        tcpsock->evt = NULL;
+    }
     if (tcpsock->buf)
         free(tcpsock->buf);
     if (tcpsock->on_close) {
@@ -38,10 +49,11 @@ static void init_req(struct tcp_socket *tcpsock)
     tcpsock->req.type = REQTYPE_TCP;
     tcpsock->req.clisa = (struct sockaddr *) &tcpsock->clisa;
     tcpsock->req.clilen = tcpsock->clilen;
-    tcpsock->req.tcpsock = tcpsock;
     tcpsock->req.reply_mini = tcp_reply_mini;
     tcpsock->req.reply_err = tcp_reply_err;
     tcpsock->req.reply_long = tcp_reply_long;
+
+    tcpsock->req.tcpsock = tcpsock;
 }
 
 static void rep_send_error(const struct req_info *req, const unsigned int code)
@@ -269,6 +281,7 @@ void tcp_newconnection(int fd, short event, void *arg)
     optval = 1;
     setsockopt(newfd, SOL_SOCKET, SO_KEEPALIVE, &optval, sizeof(optval));
 
+    tcpsock->refcount = 0;
     tcpsock->fd = newfd;
     tcpsock->evt = new_event;
     tcpsock->buf = NULL;
@@ -277,6 +290,8 @@ void tcp_newconnection(int fd, short event, void *arg)
     tcpsock->excess = 0;
     tcpsock->appdata = NULL;
     tcpsock->on_close = NULL;
+
+    tcp_socket_add_ref(tcpsock);
 
     event_set(new_event, newfd, EV_READ | EV_PERSIST, tcp_recv,
             (void *) tcpsock);
@@ -341,8 +356,11 @@ static void tcp_recv(int fd, short event, void *arg)
 
 error_exit:
     close(fd);
+    tcpsock->fd = -1;
+    /* avoid duplicate remove_ref() */
     event_del(tcpsock->evt);
-    tcp_socket_free(tcpsock);
+    tcpsock->evt = NULL;
+    tcp_socket_remove_ref(tcpsock);
     return;
 }
 
@@ -438,7 +456,30 @@ exit:
 
 error_exit:
     close(tcpsock->fd);
+    tcpsock->fd = -1;
+    /* avoid duplicate remove_ref() */
     event_del(tcpsock->evt);
-    tcp_socket_free(tcpsock);
+    tcpsock->evt = NULL;
+    tcp_socket_remove_ref(tcpsock);
     return;
+}
+
+void tcp_socket_add_ref(struct tcp_socket *tcpsock)
+{
+    if (!tcpsock) return;
+
+    //mtc_dbg("add reference count on %d %d", tcpsock->fd, tcpsock->refcount);
+
+    tcpsock->refcount++;
+}
+
+void tcp_socket_remove_ref(struct tcp_socket *tcpsock)
+{
+    if (!tcpsock || tcpsock->refcount <= 0) return;
+
+    //mtc_dbg("remove reference count on %d %d", tcpsock->fd, tcpsock->refcount);
+
+    tcpsock->refcount--;
+
+    if (tcpsock->refcount == 0) tcp_socket_free(tcpsock);
 }

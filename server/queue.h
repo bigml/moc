@@ -27,6 +27,19 @@ struct queue {
     struct queue_entry *top, *bottom;
 };
 
+/*
+ * queue_entry
+ * 1. created by main thread
+ * 2. used on app thread
+ * 3. freeed by main thread(after app thread process done)
+ * except:
+ *   req->tcpsock: may be destroied by main thread on parse_message(), or tcp_recv()
+ *                 may be destroied by app  thread on base_user_quit()
+ *                 And, on main thread, not even destroy req->tcpsock, it will also
+ *                 call [xxx_]user_destroy() to destroy app's memory.
+ *                 So, we need a method to make sure tcpsock don't go away suddenly.
+ *                 I pick reference couting here.
+ */
 struct queue_entry {
     uint32_t operation;
     struct req_info *req;

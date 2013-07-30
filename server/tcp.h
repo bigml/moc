@@ -4,6 +4,7 @@
 /* TCP socket structure. Used mainly to hold buffers from incomplete
  * recv()s. */
 struct tcp_socket {
+    int refcount;
     int fd;
     struct sockaddr_in clisa;
     socklen_t clilen;
@@ -22,7 +23,10 @@ struct tcp_socket {
 int tcp_init(const char* ip, int port);
 void tcp_close(int fd);
 void tcp_newconnection(int fd, short event, void *arg);
+
 void tcp_socket_free(struct tcp_socket *tcpsock);
+void tcp_socket_add_ref(struct tcp_socket *tcpsock);
+void tcp_socket_remove_ref(struct tcp_socket *tcpsock);
 
 #endif
 

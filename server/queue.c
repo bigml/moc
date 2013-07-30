@@ -103,6 +103,8 @@ struct queue_entry *queue_entry_create(void)
 
 void queue_entry_free(struct queue_entry *e) {
     if (e->req) {
+        if (e->req->tcpsock) tcp_socket_remove_ref(e->req->tcpsock);
+        
         free(e->req->clisa);
         free(e->req);
     }

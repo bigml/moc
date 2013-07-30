@@ -102,7 +102,6 @@ struct base_user *base_user_new(struct base_info *binfo, char *uid, QueueEntry *
 bool base_user_quit(struct base_info *binfo, char *uid,
                     QueueEntry *q, void (*user_destroy)(void *arg))
 {
-    struct tcp_socket *tcpsock;
     struct base_user *user;
 
     user = base_user_find(binfo, uid);
@@ -115,25 +114,9 @@ bool base_user_quit(struct base_info *binfo, char *uid,
     
     mtc_dbg("%s %s %d quit", user->uid, user->ip, user->port);
 
-    close(user->fd);
+    tcp_socket_remove_ref(user->tcpsock);
+    user->tcpsock = NULL;
 
-    /*
-     * TODO
-     * we should do this on main thread.
-     * it works fine on test, don't known how works on future
-     */
-    tcpsock = user->tcpsock;
-    if (tcpsock) {
-        tcpsock->appdata = NULL;
-        tcpsock->on_close = NULL;
-        event_del(tcpsock->evt);
-        tcp_socket_free(tcpsock);
-        user->tcpsock = NULL;
-    }
-
-    if (user_destroy) user_destroy(user);
-    else base_user_destroy(user);
-    
     return true;
 }
 
