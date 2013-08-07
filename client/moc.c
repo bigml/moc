@@ -83,7 +83,7 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
         if (ret != 0) {
             if (ret == ETIMEDOUT) {
                 mssync_unlock(&arg->mainsync);
-                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "服务器暂无响应，请稍后再试");
             } else {
                 hdf_set_valuef(evt->hdfrcv, PRE_ERRMSG"=timedwait error %d", ret);
             }
@@ -97,7 +97,7 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
             vsize = 0;
             rv = tcp_get_rep(srv, evt->rcvbuf, MAX_PACKET_LEN, &p, &vsize);
             if (rv == -1) {
-                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "moc server died");
+                hdf_set_value(evt->hdfrcv, PRE_ERRMSG, "服务器暂无响应，请稍后再试");
                 rv = REP_ERR;
             }
             evt->errcode = rv;
@@ -292,7 +292,7 @@ static NEOERR* _moc_set_param(moc_arg *arg, char *module, char *key, char *val)
 static NEOERR* _moc_set_param_int(moc_arg *arg, char *module, char *key, int val)
 {
     MOC_NOT_NULLB(arg, arg->evth);
-    MOC_NOT_NULLC(module, key, val);
+    MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
     
@@ -308,7 +308,7 @@ static NEOERR* _moc_set_param_uint(moc_arg *arg, char *module, char *key,
                                    unsigned int val)
 {
     MOC_NOT_NULLB(arg, arg->evth);
-    MOC_NOT_NULLC(module, key, val);
+    MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
     
@@ -326,7 +326,7 @@ static NEOERR* _moc_set_param_uint(moc_arg *arg, char *module, char *key,
 static NEOERR* _moc_set_param_int64(moc_arg *arg, char *module, char *key, int64_t val)
 {
     MOC_NOT_NULLB(arg, arg->evth);
-    MOC_NOT_NULLC(module, key, val);
+    MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
     
@@ -344,7 +344,7 @@ static NEOERR* _moc_set_param_int64(moc_arg *arg, char *module, char *key, int64
 static NEOERR* _moc_set_param_float(moc_arg *arg, char *module, char *key, float val)
 {
     MOC_NOT_NULLB(arg, arg->evth);
-    MOC_NOT_NULLC(module, key, val);
+    MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
     
