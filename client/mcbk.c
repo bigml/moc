@@ -96,7 +96,7 @@ struct moc_cbk* mcbk_find(HASH *cbkh, char *module, char *cmd)
 {
     char tok[1024];
 
-    memset(tok, sizeof(tok), 0x0);
+    memset(tok, 0x0, sizeof(tok));
     snprintf(tok, sizeof(tok), "%s_%s", module, cmd);
 
     mtc_dbg("lookup %s in cbkh", tok);
@@ -108,7 +108,7 @@ void mcbk_regist(HASH *cbkh, char *module, char *cmd, struct moc_cbk *c)
 {
     char tok[1024];
 
-    memset(tok, sizeof(tok), 0x0);
+    memset(tok, 0x0, sizeof(tok));
     snprintf(tok, sizeof(tok), "%s_%s", module, cmd);
 
     mtc_dbg("regist %s in cbkh", tok);

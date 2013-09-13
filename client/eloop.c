@@ -24,7 +24,7 @@ static void* el_routine(void *arg)
     fd_set readset;
     struct timeval tv;
     for (;;) {
-        memset(conn, sizeof(conn), 0x0);
+        memset(conn, 0x0, sizeof(conn));
         num_conn = 0;
         key = NULL;
 

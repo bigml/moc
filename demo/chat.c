@@ -74,7 +74,7 @@ int main()
     printf("regist %s ok, rubbish please, bye to quit\n", nick);
 
     while (1) {
-        memset(msg, 1000, 0x0);
+        memset(msg, 0x0, 1000);
         scanf("%s", msg);
         
         if (!strcmp(msg, "bye")) break;

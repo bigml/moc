@@ -156,7 +156,7 @@ NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size
     unsigned char *rbuf;
     uint32_t t;
 
-    memset(static_buf, MAX_PACKET_LEN, 0x0);
+    memset(static_buf, 0x0, MAX_PACKET_LEN);
 
     hdf_set_value(datanode, "_Reserve", "moc");
     err = hdf_set_attr(datanode, "_Reserve", "cmd", cmd);
