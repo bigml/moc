@@ -152,7 +152,7 @@ NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size
     MCS_NOT_NULLC(cmd, datanode, buf);
     MCS_NOT_NULLA(size);
 
-    size_t bsize;
+    size_t bsize, vsize;
     unsigned char *rbuf;
     uint32_t t;
 
@@ -164,13 +164,13 @@ NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size
 
     TRACE_HDF(datanode);
 
-    bsize = pack_hdf(datanode, static_buf, MAX_PACKET_LEN);
-    if(bsize <= 0) return nerr_raise(NERR_ASSERT, "packet error");
+    vsize = pack_hdf(datanode, static_buf, MAX_PACKET_LEN);
+    if(vsize <= 0) return nerr_raise(NERR_ASSERT, "packet error");
 
     /*
      * copy from tcp.c tcp_reply_long()
      */
-    bsize = 4 + 4 + 4 + 4 + bsize;
+    bsize = 4 + 4 + 4 + 4 + vsize;
     rbuf = calloc(1, bsize);
     if (!rbuf) return nerr_raise(NERR_NOMEM, "alloc msg buffer");
 
@@ -185,9 +185,9 @@ NEOERR* base_msg_new(char *cmd, HDF *datanode, unsigned char **buf, size_t *size
     t = htonl(10000);
     memcpy(rbuf + 8, &t, 4);
     
-    t = htonl(bsize);
+    t = htonl(vsize);
     memcpy(rbuf + 12, &t, 4);
-    memcpy(rbuf + 16, static_buf, bsize - 16);
+    memcpy(rbuf + 16, static_buf, vsize);
 
     *buf = rbuf;
     *size = bsize;
