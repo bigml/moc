@@ -19,7 +19,7 @@ moc_%.so: private/%_internal.c private/%_timer.c moc_%.c
 	@echo "$(CC) -o $@"
 ifeq ($(UNAME), Darwin)
 	@$(CC) $(CFLAGS) -c $^ $(INC_MOON)
-	@$(CC) -dynamiclib -undefined suppress -flat_namespace $(patsubst %.c, %.o, $<) -o $@
+	@$(CC) -dynamiclib -undefined suppress -flat_namespace -o $@ $^ $(INC_MOON)
 else
 	@$(CC) $(CFLAGS) -o $@ $^ $(INC_MOON)
 endif
@@ -32,4 +32,4 @@ uninstall:
 	rm -f $(PREFIX)/lib/$(LIB_PLUGIN)
 
 clean:
-	rm -f $(LIB_PLUGIN)
+	rm -f $(LIB_PLUGIN) *.o
