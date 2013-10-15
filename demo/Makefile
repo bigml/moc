@@ -1,5 +1,5 @@
 INCS = -I../client -I../client/clearsilver -I../server
-LIBS = -L../client -lmoc -lpthread -lrt
+LIBS = -L../client -lmoc -lpthread
 
 SOURCES = $(wildcard *.c)
 BINARY = $(patsubst %.c, %, $(SOURCES))
