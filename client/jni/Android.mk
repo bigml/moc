@@ -33,7 +33,6 @@ LOCAL_SRC_FILES :=                \
 LOCAL_C_INCLUDES :=               \
     $(LOCAL_PATH)/clearsilver     \
     $(LOCAL_PATH)clearsilver/util \
-    $(LOCAL_PATH)/android \
     $(LOCAL_PATH)
 
 LOCAL_EXPORT_C_INCLUDES :=         \
