@@ -57,7 +57,13 @@
 #include <mach/mach.h>
 #include <crt_externs.h>
 #define environ (*_NSGetEnviron())
-#define MSG_NOSIGNAL SO_NOSIGPIPE 
+#define MSG_NOSIGNAL SO_NOSIGPIPE
+#endif
+
+#ifdef __ANDROID__
+#include <jni.h>
+extern JavaVM *gVm;
+extern JNIEnv *gCallbackEnv;
 #endif
 
 #include <sys/types.h>     /* socket defines */
@@ -83,7 +89,6 @@
 #include "mscli.h"          /* process moc server to client stuff */
 #endif
 
-
 __BEGIN_DECLS
 
 #define MOC_CONFIG_FILE        "mocclient.hdf"
@@ -107,7 +112,9 @@ NEOERR* moc_init(char *path);
  * 2. trace init
  * 3. lerr_init()
  */
-NEOERR* moc_init_fromhdf(HDF *node, char *path);
+NEOERR* moc_init_fromhdf(HDF *node);
+
+NEOERR* moc_init_frombuf(char *buf);
 
 /*
  * 销毁
@@ -160,9 +167,6 @@ int moc_errcode(char *module);
  * 针对服务器主动发起的命令，绑定对应的回调函数
  */
 NEOERR* moc_regist_callback(char *module, char *cmd, MocCallback cmdcbk);
-
-
-
 
 /*
  * thread safe set

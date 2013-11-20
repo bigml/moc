@@ -13,6 +13,14 @@ static void* callback_routine(void *arg)
 
     mtc_dbg("start callback thread...");
 
+    /*
+     * attach callback thread to Java VM
+     * TODO must to be detached to Java VM!
+     */
+#ifdef __ANDROID__
+    (*gVm)->AttachCurrentThread(gVm, &gCallbackEnv, NULL);
+#endif
+
     for (;;) {
         mutil_utc_time(&ts);
 
@@ -28,7 +36,7 @@ static void* callback_routine(void *arg)
         while (msqueue_isempty(earg->callbackqueue) && rv == 0) {
             rv = mssync_timedwait(&earg->callbacksync, &ts);
         }
-        
+
         if (rv != 0 && rv != ETIMEDOUT) {
             mtc_err("Error in timedwait() %d", rv);
             continue;
@@ -68,7 +76,7 @@ NEOERR* mcbk_start(moc_arg *arg)
 void mcbk_stop(moc_arg *arg)
 {
     if (!m_thread) return;
-    
+
     mtc_dbg("end callback thread...");
 
     m_stop = true;

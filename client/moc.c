@@ -14,10 +14,10 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
     moc_srv *srv;
     unsigned char *p;
     uint32_t rv = REP_OK;
-    
+
     if (!evt) return REP_ERR;
     if (eventloop && !arg) return REP_ERR;
-    
+
     mtc_dbg("trigger cmd %d with %d flags on event %s %s", cmd, flags, evt->ename, key);
 
     evt->cmd = cmd;
@@ -41,19 +41,21 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
     * ((uint32_t *) p + 2) = htonl(ksize);
     memcpy(p+12, evt->ename, ksize);
 
+    /* (Version + Request ID) + (cmd + flags) + key + keysize */
     evt->psize = TCP_MSG_OFFSET + 12 + ksize;
-    
+
     /*
-     * don't escape the hdf because some body need set ' in param 
+     * don't escape the hdf because some body need set in param
      */
     vsize = pack_hdf(evt->hdfsnd, evt->payload + evt->psize, MAX_PACKET_LEN);
     evt->psize += vsize;
 
+    /* 13 plus 4 equals 17 */
     if (evt->psize < 17) {
         * (uint32_t *) (evt->payload+evt->psize) = htonl(DATA_TYPE_EOF);
         evt->psize += sizeof(uint32_t);
     }
-    
+
     t = tcp_srv_send(srv, evt->payload, evt->psize, arg);
     if (t <= 0) {
         evt->errcode = REP_ERR_SEND;
@@ -71,13 +73,13 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
 
     if (eventloop) {
         if (!(flags & FLAGS_SYNC)) return REP_OK;
-    
+
         struct timespec ts;
         mutil_utc_time(&ts);
         if (srv->tv.tv_sec <= 0) srv->tv.tv_sec = 1;
         ts.tv_sec += srv->tv.tv_sec;
         /* TODO srv->tv_usec */
-    
+
         mssync_lock(&(arg->mainsync));
         int ret = mssync_timedwait(&(arg->mainsync), &ts);
         if (ret != 0) {
@@ -108,7 +110,7 @@ static int _mevt_trigger(moc_t *evt, char *key, unsigned short cmd,
             }
         }
     }
-    
+
     return rv;
 }
 
@@ -137,7 +139,7 @@ static HDF* _moc_get_confhdf(char *path)
     snprintf(fname, sizeof(fname), "%s/mocclient", fpath);
     sfoo = hdf_get_value(cfg, "Config.logfile", fname);
     mtc_init(sfoo, hdf_get_int_value(cfg, "Config.trace_level", TC_DEFAULT_LEVEL));
-    
+
     lerr_init();
 
     return cfg;
@@ -149,7 +151,7 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
     moc_t *nevt = NULL, *evt;
 
     MOC_NOT_NULLB(pnode, evth);
-    
+
     /*
      * network modules
      */
@@ -162,7 +164,7 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
         int port = hdf_get_int_value(node, "port", 5000);
 
         mtc_dbg("get config from %s %d", host, port);
-        
+
         if (moc_add_tcp_server(nevt, host, port, false, NULL)) {
             _mevt_trigger(nevt, NULL, REQ_CMD_CONFIG_GET, FLAGS_SYNC, false, NULL);
             if (PROCESS_OK(nevt->errcode)) {
@@ -181,7 +183,7 @@ static NEOERR* _moc_load_fromhdf(HDF *pnode, HASH *evth)
 
 localmodule:
     if (hdf_get_obj(pnode, "modules")) pnode = hdf_get_obj(pnode, "modules");
-    
+
     /*
      * local modules
      */
@@ -243,7 +245,7 @@ static void _moc_destroy(moc_arg *arg, bool eventloop)
         struct moc_cbk *c = hash_next(table, (void**)&key);
         while (c) {
             mcbk_destroy(c);
-        
+
             c = hash_next(table, (void**)&key);
         }
     }
@@ -253,7 +255,7 @@ static void _moc_destroy(moc_arg *arg, bool eventloop)
     moc_t *evt = (moc_t*)hash_next(table, (void**)&key);
     while (evt != NULL) {
         mevt_destroy(evt);
-        
+
         evt = hash_next(table, (void**)&key);
     }
 
@@ -267,7 +269,7 @@ static HDF* _moc_hdfsnd(moc_arg *arg, char *module)
     if (!arg || !module) return NULL;
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     if (!evt) return NULL;
 
@@ -280,7 +282,7 @@ static NEOERR* _moc_set_param(moc_arg *arg, char *module, char *key, char *val)
     MOC_NOT_NULLC(module, key, val);
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
 
@@ -295,7 +297,7 @@ static NEOERR* _moc_set_param_int(moc_arg *arg, char *module, char *key, int val
     MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
 
@@ -311,7 +313,7 @@ static NEOERR* _moc_set_param_uint(moc_arg *arg, char *module, char *key,
     MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
 
@@ -329,7 +331,7 @@ static NEOERR* _moc_set_param_int64(moc_arg *arg, char *module, char *key, int64
     MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
 
@@ -347,7 +349,7 @@ static NEOERR* _moc_set_param_float(moc_arg *arg, char *module, char *key, float
     MOC_NOT_NULLB(module, key);
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     MOC_NOT_NULLA(evt);
 
@@ -367,7 +369,7 @@ static int _moc_trigger(moc_arg *arg, char *module, char *key, unsigned short cm
     if (!arg || !module) return REP_ERR;
 
     HASH *evth = arg->evth;
-    
+
     evt = hash_lookup(evth, module);
     if (!evt) {
         mtc_err("can't found %s module", module);
@@ -382,7 +384,7 @@ HDF* _moc_hdfrcv(moc_arg *arg, char *module)
     if (!arg || !module) return NULL;
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     if (!evt) return NULL;
 
@@ -394,7 +396,7 @@ int _moc_errcode(moc_arg *arg, char *module)
     if (!arg || !module) return -1;
 
     HASH *evth = arg->evth;
-    
+
     moc_t *evt = hash_lookup(evth, module);
     if (!evt) return -1;
 
@@ -406,7 +408,7 @@ static NEOERR* _moc_regist_callback(moc_arg *arg, char *module, char *cmd,
 {
     MOC_NOT_NULLB(arg, arg->cbkh);
     MOC_NOT_NULLC(module, cmd, cmdcbk);
-    
+
 #ifdef EVENTLOOP
     struct moc_cbk *c = mcbk_create();
     if (!c) return nerr_raise(NERR_NOMEM, "alloc cbk");
@@ -415,7 +417,7 @@ static NEOERR* _moc_regist_callback(moc_arg *arg, char *module, char *cmd,
     c->callback = cmdcbk;
 
     mcbk_regist(arg->cbkh, module, cmd, c);
-    
+
 #else
     mtc_foo("can't regist callback without EVENTLOOP");
 #endif
@@ -431,9 +433,9 @@ NEOERR* moc_init(char *path)
 {
     HDF *node;
     NEOERR *err;
-    
+
     if (m_arg) return nerr_raise(NERR_ASSERT, "moc inited already");
-    
+
     m_arg = mocarg_init();
     if (!m_arg) return nerr_raise(NERR_NOMEM, "alloc moc arg");
 
@@ -455,12 +457,12 @@ NEOERR* moc_init(char *path)
     return STATUS_OK;
 }
 
-NEOERR* moc_init_fromhdf(HDF *node, char *path)
+NEOERR* moc_init_fromhdf(HDF *node)
 {
     NEOERR *err;
 
     if (m_arg) return nerr_raise(NERR_ASSERT, "moc inited already");
-    
+
     m_arg = mocarg_init();
     if (!m_arg) return nerr_raise(NERR_NOMEM, "alloc moc arg");
 
@@ -476,6 +478,17 @@ NEOERR* moc_init_fromhdf(HDF *node, char *path)
 #endif
 
     return STATUS_OK;
+}
+
+NEOERR* moc_init_frombuf(char *buf)
+{
+    HDF *node;
+    hdf_init(&node);
+    if (buf) {
+        hdf_read_string(node, buf);
+    }
+
+    return moc_init_fromhdf(node);
 }
 
 void moc_destroy()
@@ -542,7 +555,7 @@ NEOERR* moc_init_r(char *path, moc_arg **arg)
 {
     HDF *node;
     NEOERR *err;
-    
+
     MOC_NOT_NULLA(arg);
 
     moc_arg *rarg = mocarg_init();
