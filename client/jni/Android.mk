@@ -28,7 +28,7 @@ LOCAL_SRC_FILES :=                \
     mtrace.c                      \
     packet.c                      \
     tcp.c                         \
-    moc-jni.c
+    j_moc.c
 
 LOCAL_C_INCLUDES :=               \
     $(LOCAL_PATH)/clearsilver     \
