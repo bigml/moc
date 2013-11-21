@@ -38,11 +38,16 @@ jmethodID gMethodChatQuitId = NULL;
 /*
  * methods definition for module 'bang'
  */
-jmethodID gMethodBangJoinId = NULL;
+jmethodID gMethodBangLoginId = NULL;
 jmethodID gMethodBangQuitId = NULL;
-jmethodID gMethodBattleInviteId = NULL;
-jmethodID gMethodBattleBeginId  = NULL;
-jmethodID gMethodTurnId = NULL;
+jmethodID gMethodBangBattleInviteId = NULL;
+jmethodID gMethodBangBattleBeginId  = NULL;
+jmethodID gMethodBangJoinId = NULL;
+jmethodID gMethodBangTurnId = NULL;
+
+typedef void (*MocModuleCallback)(JNIEnv *env, jobject objClass);
+static HASH *registed_callback_module_table;
+static void j_moc_regist_callback_bang(JNIEnv *env, jobject objClass);
 
 static jstring
 hdf_write_jstring(HDF *node)
@@ -59,7 +64,7 @@ hdf_write_jstring(HDF *node)
 
 /*
  * construct jobject via default construct for class to invoke
- * non-static method.
+ * instance method.
  */
 static jobject
 getInstance(JNIEnv *env, jclass objClass)
@@ -71,7 +76,7 @@ getInstance(JNIEnv *env, jclass objClass)
 }
 
 /*
- * For native implementation for java methods, if its' static method
+ * For native implementation for java methods, if it's static method
  * belongs to class itself, then second parameter should be jclass(it
  * refers to MocClient here), otherwise, it should be jobject because
  * it's just instance of specified class.
@@ -82,7 +87,7 @@ j_moc_init(JNIEnv *env, jobject objClass,
 {
     char *fileChars = NULL;
     if (fileStr) {
-        fileChars = (char*)(*env)->GetStringUTFChars(env, fileStr, NULL);
+        fileChars = (char*) (*env)->GetStringUTFChars(env, fileStr, NULL);
         LOGI("moc client would to be initialized by file %s.", fileChars);
     } else {
         fileChars = "conf/mocclient.hdf";
@@ -107,46 +112,121 @@ j_moc_init(JNIEnv *env, jobject objClass,
     /* close file */
     AAsset_close(file);
 
-    moc_init_frombuf(buffer);
+     moc_init_frombuf(buffer);
+
+    /*
+     * initial module calback hash table
+     * but it only supports bang module currently
+     */
+    hash_init(&registed_callback_module_table, hash_str_hash, hash_str_comp, NULL);
+    hash_insert(registed_callback_module_table, (void*) "bang", (void*) j_moc_regist_callback_bang);
 
     return true;
 }
 
+/*
+ * Module 'bang' callback mechanism
+ */
 static void
 j_moc_bang_login_callback(HDF *datanode)
 {
-    LOGI("moc is callbacking.");
-
     /*
      * Java VM would check whether jni environment thread id equals to caller
      * thread id.
      */
     (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+            gMethodBangLoginId, hdf_write_jstring(datanode));
+}
+
+static void
+j_moc_bang_quit_callback(HDF *datanode)
+{
+    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+            gMethodBangQuitId, hdf_write_jstring(datanode));
+}
+
+static void
+j_moc_bang_battle_invite_callback(HDF *datanode)
+{
+    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+            gMethodBangBattleInviteId, hdf_write_jstring(datanode));
+}
+
+static void
+j_moc_bang_battle_begin_callback(HDF *datanode)
+{
+    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+            gMethodBangBattleBeginId, hdf_write_jstring(datanode));
+}
+
+static void
+j_moc_bang_join_callback(HDF *datanode)
+{
+    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
             gMethodBangJoinId, hdf_write_jstring(datanode));
 }
 
 static void
-j_moc_regist_callback(JNIEnv *env, jobject objClass)
+j_moc_bang_turn_callback(HDF *datanode)
 {
-    /*
-     * Load 'bang' module callbacks
-     */
+    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+            gMethodBangTurnId, hdf_write_jstring(datanode));
+}
+
+static void
+j_moc_regist_callback_bang(JNIEnv *env, jobject objClass)
+{
     gCallbackBangClass = (*env)->FindClass(env, CALLBACK_BANG_CLASS);
 
-    gMethodBangJoinId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    /* Find static method ids */
+    gMethodBangLoginId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
             "loginCallback", "(Ljava/lang/String;)V");
+    gMethodBangQuitId = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+            "quitCallback", "(Ljava/lang/String;)V");
 
+    gMethodBangBattleInviteId = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+            "battleInviteCallback", "(Ljava/lang/String;)V");
+    gMethodBangBattleBeginId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+            "battleBeginCallback", "(Ljava/lang/String;)V");
+
+    gMethodBangJoinId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+            "joinCallback", "(Ljava/lang/String;)V");
+    gMethodBangTurnId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+            "turnCallback", "(Ljava/lang/String;)V");
+
+    /* regist callbacks for module 'bang' */
     moc_regist_callback("bang", "login", j_moc_bang_login_callback);
+    moc_regist_callback("bang", "quit",  j_moc_bang_quit_callback);
+
+    moc_regist_callback("bang", "battleinvite", j_moc_bang_battle_invite_callback);
+    moc_regist_callback("bang", "battlebegin",  j_moc_bang_battle_begin_callback);
+
+    moc_regist_callback("bang", "join", j_moc_bang_join_callback);
+    moc_regist_callback("bang", "turn", j_moc_bang_turn_callback);
+}
+
+/*
+ * TODO It only supports callback static methods, instance methods callbacking
+ * should be implemented as an option chosen by user.
+ */
+static void
+j_moc_regist_callback_module(JNIEnv *env, jobject objClass,
+        jstring moduleStr)
+{
+    char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
+    LOGI("regist %s module callbackers", moduleChars);
+    MocModuleCallback callbacker = (MocModuleCallback) hash_lookup(registed_callback_module_table, moduleChars);
+    callbacker(env, objClass);
 }
 
 static jint
 j_moc_trigger(JNIEnv *env, jobject objClass,
         jstring moduleStr, jstring keyStr, jshort cmd, jshort flags)
 {
-    char *moduleChars = (char*)(*env)->GetStringUTFChars(env, moduleStr, NULL);
+    char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
     char *keyChars    = NULL; /* keyChars may be null */
     if (keyStr) {
-        keyChars = (char*)(*env)->GetStringUTFChars(env, keyStr, NULL);
+        keyChars = (char*) (*env)->GetStringUTFChars(env, keyStr, NULL);
     }
 
     LOGI("module is %s, key is %s, cmd is %d, flags is %d.",
@@ -159,9 +239,9 @@ static void
 j_moc_set_param(JNIEnv *env, jobject objClass,
         jstring moduleStr, jstring keyStr, jstring valStr)
 {
-    char *moduleChars = (char*)(*env)->GetStringUTFChars(env, moduleStr, NULL);
-    char *keyChars    = (char*)(*env)->GetStringUTFChars(env, keyStr, NULL);
-    char *valChars    = (char*)(*env)->GetStringUTFChars(env, valStr, NULL);
+    char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
+    char *keyChars    = (char*) (*env)->GetStringUTFChars(env, keyStr, NULL);
+    char *valChars    = (char*) (*env)->GetStringUTFChars(env, valStr, NULL);
 
     LOGI("module is %s, key is %s, val is %s.",
             moduleChars, keyChars, valChars);
@@ -181,8 +261,8 @@ static JNINativeMethod gMethods[] = {
     /* name, signature, funcPtr */
     { "init", "(Landroid/content/res/AssetManager;Ljava/lang/String;)Z",
         (void*)j_moc_init },
-    { "registCallback", "()V",
-        (void*)j_moc_regist_callback },
+    { "registCallback", "(Ljava/lang/String;)V",
+        (void*)j_moc_regist_callback_module },
     { "trigger", "(Ljava/lang/String;Ljava/lang/String;SS)I",
         (void*)j_moc_trigger },
     { "setParam", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V",
