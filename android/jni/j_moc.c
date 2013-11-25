@@ -16,18 +16,22 @@
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 #define LOGF(...) __android_log_print(ANDROID_LOG_FATAL, TAG, __VA_ARGS__)
 
-#define MOC_CLIENT_CLASS    "com/hunantv/tazai/MocClient"
-#define CALLBACK_CHAT_CLASS "com/hunantv/tazai/ChatActivity"
+/**
+ * TODO update invoking activty UI via static methods!
+ * TODO how to get invoking activity object reference.
+ */
 #define CALLBACK_BANG_CLASS "com/hunantv/tazai/BangActivity"
 
 #include "moc.h"
 #define MOC_CONFIG_DIR  "conf"
 #define MOC_CONFIG_FILE "mocclient.hdf"
 
-JavaVM *gVm                = NULL;
-JNIEnv *gCallbackEnv       = NULL;
-jclass  gCallbackChatClass = NULL;
-jclass  gCallbackBangClass = NULL;
+JavaVM *gVm                 = NULL;
+JNIEnv *gCallbackEnv        = NULL;
+jclass  gCallbackChatClass  = NULL;
+jclass  gCallbackBangClass  = NULL;
+jobject gCallbackChatObject = NULL;
+jobject gCallbackBangObject = NULL;
 
 /*
  * methods definition for module 'chat'
@@ -45,9 +49,9 @@ jmethodID gMethodBangBattleBeginId  = NULL;
 jmethodID gMethodBangJoinId = NULL;
 jmethodID gMethodBangTurnId = NULL;
 
-typedef void (*MocModuleCallback)(JNIEnv *env, jobject objClass);
+typedef void (*MocModuleCallback)(JNIEnv *env, jclass clazz);
 static HASH *registed_callback_module_table;
-static void j_moc_regist_callback_bang(JNIEnv *env, jobject objClass);
+static void j_moc_regist_callback_bang(JNIEnv *env, jclass clazz);
 
 static jstring
 hdf_write_jstring(HDF *node)
@@ -82,7 +86,7 @@ getInstance(JNIEnv *env, jclass objClass)
  * it's just instance of specified class.
  */
 static jboolean
-j_moc_init(JNIEnv *env, jobject objClass,
+j_moc_init(JNIEnv *env, jobject obj,
         jobject assetManager, jstring fileStr)
 {
     char *fileChars = NULL;
@@ -134,64 +138,65 @@ j_moc_bang_login_callback(HDF *datanode)
      * Java VM would check whether jni environment thread id equals to caller
      * thread id.
      */
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangLoginId, hdf_write_jstring(datanode));
 }
 
 static void
 j_moc_bang_quit_callback(HDF *datanode)
 {
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangQuitId, hdf_write_jstring(datanode));
 }
 
 static void
 j_moc_bang_battle_invite_callback(HDF *datanode)
 {
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangBattleInviteId, hdf_write_jstring(datanode));
 }
 
 static void
 j_moc_bang_battle_begin_callback(HDF *datanode)
 {
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangBattleBeginId, hdf_write_jstring(datanode));
 }
 
 static void
 j_moc_bang_join_callback(HDF *datanode)
 {
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangJoinId, hdf_write_jstring(datanode));
 }
 
 static void
 j_moc_bang_turn_callback(HDF *datanode)
 {
-    (*gCallbackEnv)->CallStaticVoidMethod(gCallbackEnv, gCallbackBangClass,
+    (*gCallbackEnv)->CallVoidMethod(gCallbackEnv, gCallbackBangObject,
             gMethodBangTurnId, hdf_write_jstring(datanode));
 }
 
 static void
-j_moc_regist_callback_bang(JNIEnv *env, jobject objClass)
+j_moc_regist_callback_bang(JNIEnv *env, jobject obj)
 {
-    gCallbackBangClass = (*env)->FindClass(env, CALLBACK_BANG_CLASS);
+    gCallbackBangClass  = (*env)->FindClass(env, CALLBACK_BANG_CLASS);
+    gCallbackBangObject = (*env)->NewGlobalRef(env, obj);
 
-    /* Find static method ids */
-    gMethodBangLoginId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    /* Find instance method ids */
+    gMethodBangLoginId  = (*env)->GetMethodID(env, gCallbackBangClass,
             "loginCallback", "(Ljava/lang/String;)V");
-    gMethodBangQuitId = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    gMethodBangQuitId = (*env)->GetMethodID(env, gCallbackBangClass,
             "quitCallback", "(Ljava/lang/String;)V");
 
-    gMethodBangBattleInviteId = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    gMethodBangBattleInviteId = (*env)->GetMethodID(env, gCallbackBangClass,
             "battleInviteCallback", "(Ljava/lang/String;)V");
-    gMethodBangBattleBeginId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    gMethodBangBattleBeginId  = (*env)->GetMethodID(env, gCallbackBangClass,
             "battleBeginCallback", "(Ljava/lang/String;)V");
 
-    gMethodBangJoinId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    gMethodBangJoinId  = (*env)->GetMethodID(env, gCallbackBangClass,
             "joinCallback", "(Ljava/lang/String;)V");
-    gMethodBangTurnId  = (*env)->GetStaticMethodID(env, gCallbackBangClass,
+    gMethodBangTurnId  = (*env)->GetMethodID(env, gCallbackBangClass,
             "turnCallback", "(Ljava/lang/String;)V");
 
     /* regist callbacks for module 'bang' */
@@ -205,22 +210,18 @@ j_moc_regist_callback_bang(JNIEnv *env, jobject objClass)
     moc_regist_callback("bang", "turn", j_moc_bang_turn_callback);
 }
 
-/*
- * TODO It only supports callback static methods, instance methods callbacking
- * should be implemented as an option chosen by user.
- */
 static void
-j_moc_regist_callback_module(JNIEnv *env, jobject objClass,
+j_moc_regist_callback_module(JNIEnv *env, jobject obj,
         jstring moduleStr)
 {
     char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
     LOGI("regist %s module callbackers", moduleChars);
     MocModuleCallback callbacker = (MocModuleCallback) hash_lookup(registed_callback_module_table, moduleChars);
-    callbacker(env, objClass);
+    callbacker(env, obj);
 }
 
 static jint
-j_moc_trigger(JNIEnv *env, jobject objClass,
+j_moc_trigger(JNIEnv *env, jobject obj,
         jstring moduleStr, jstring keyStr, jshort cmd, jshort flags)
 {
     char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
@@ -236,7 +237,7 @@ j_moc_trigger(JNIEnv *env, jobject objClass,
 }
 
 static void
-j_moc_set_param(JNIEnv *env, jobject objClass,
+j_moc_set_param(JNIEnv *env, jobject obj,
         jstring moduleStr, jstring keyStr, jstring valStr)
 {
     char *moduleChars = (char*) (*env)->GetStringUTFChars(env, moduleStr, NULL);
@@ -250,7 +251,7 @@ j_moc_set_param(JNIEnv *env, jobject objClass,
 }
 
 static void
-j_moc_destroy(JNIEnv *env, jobject objClass)
+j_moc_destroy(JNIEnv *env, jobject obj)
 {
     LOGI("moc is to be destroyed.");
 
@@ -289,7 +290,7 @@ static int registerNativeMethods(JNIEnv *env, const char *className,
 
 static int registerNatives(JNIEnv *env)
 {
-    if (!registerNativeMethods(env, MOC_CLIENT_CLASS,
+    if (!registerNativeMethods(env, CALLBACK_BANG_CLASS,
                 gMethods, sizeof(gMethods) / sizeof(gMethods[0]))) {
         return JNI_FALSE;
     }
