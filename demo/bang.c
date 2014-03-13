@@ -5,6 +5,7 @@
 #define USERID_LENGTH 7
 
 static bool isInBattle = false;
+static bool battle_status = false;
 
 char* process_keyboard(int key)
 {
@@ -141,7 +142,7 @@ int main()
                 redir = process_keyboard(pressed_key);
 
                 printf("what to turn is %s\n", redir);
-                printf("redirection, battle status is %s\n", battle_status);
+                printf("redirection, battle status is %d\n", battle_status);
 
                 moc_set_param("bang", "redirection", redir);
 

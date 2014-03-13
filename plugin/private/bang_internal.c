@@ -340,7 +340,7 @@ NEOERR* bang_broadcast_to_battle_message(BangInfo *info, BangUser *user)
                 mtc_err("impossible state error %s: %d",
                         ouser->inherited_user.uid, ouser->state);
             }
-            ouser = USER_NEXT(info->bang_idle_user_hash);
+            ouser = (BangUser*)USER_NEXT(info->bang_idle_user_hash);
             continue;
         }
         if (user->current_battling_table->battling_user_number > noticenum) break;
@@ -365,7 +365,7 @@ NEOERR* bang_broadcast_to_battle_message(BangInfo *info, BangUser *user)
         TRACE_NOK(err);
 
         /* let's track to next idle user */
-        ouser = USER_NEXT(info->bang_idle_user_hash);
+        ouser = (BangUser*)USER_NEXT(info->bang_idle_user_hash);
     } USER_END;
 
     base_msg_free(msgbuf);

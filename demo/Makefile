@@ -1,6 +1,12 @@
 INCS = -I../client -I../client/clearsilver -I../server
 LIBS = -L../client -lmoc -lpthread
 
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Linux)
+	LIBS += -lrt
+endif
+
 SOURCES = $(wildcard *.c)
 BINARY = $(patsubst %.c, %, $(SOURCES))
 

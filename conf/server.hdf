@@ -9,6 +9,7 @@ Server {
     plugins {
         0 = base
         1 = chat
+        2 = collect
     }
 }
 
@@ -23,7 +24,7 @@ Client {
                 timeout_u = 800000
             }
         }
-    
+
         chat {
             0 {
                 ip = 172.10.7.204
@@ -31,7 +32,17 @@ Client {
                 timeout_s = 0
                 timeout_u = 800000
             }
-    
+
+        }
+
+        collect {
+            0 {
+                ip = localhost
+                port = 5000
+                timeout_s = 0
+                timeout_u = 800000
+            }
+
         }
     }
 }
@@ -41,5 +52,13 @@ Plugin {
         dbsn = pgsql:dbname=merry host=localhost user=dida password=loveu
     }
     chat {
+    }
+    collect {
+        dbsn = mysql:dbname=merry hostaddr=linode user=xxx password=yyy
+        InsertCol {
+            cli {
+                msg [maxlen=128] = msg
+            }
+        }
     }
 }

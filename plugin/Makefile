@@ -18,8 +18,7 @@ all: $(LIB_PLUGIN)
 moc_%.so: private/%_internal.c private/%_timer.c moc_%.c
 	@echo "$(CC) -o $@"
 ifeq ($(UNAME), Darwin)
-	@$(CC) $(CFLAGS) -c $^ $(INC_MOON)
-	@$(CC) -dynamiclib -undefined suppress -flat_namespace -o $@ $^ $(INC_MOON)
+	@$(CC) $(CFLAGS) -dynamiclib -undefined suppress -flat_namespace -o $@ $^ $(INC_MOON)
 else
 	@$(CC) $(CFLAGS) -o $@ $^ $(INC_MOON)
 endif
