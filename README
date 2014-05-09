@@ -1,4 +1,4 @@
-moc 
+moc
 === - mini but extensiable online communication system,
       we use it on our game mobile app.
       most codes stolen from nmdb, clearsilver... thanks them a lot.
@@ -30,12 +30,12 @@ directory
 
 depend
 ------
-    The server depend on cmoon's mnl library currently. so, checkout
-    git://github.com/bigml/cmoon.git into the moc's parent directory.
-    and do the rest lib/mnl's compile fuck, then, every thing goes ok.
+    The server depend on cmoon's mnl library currently. so, use
+    git clone --recurese https://github.com/bigml/moc.git to use moc.
+    and do the rest compile fuck, then, every thing goes ok.
 
-    Client is very easy to compile, gcc, xcode, ndk can compile client
-    directory to a static library.
+    Client is very easy to compile (use make client),
+    gcc, xcode, ndk can compile client directory to a static library.
     Take a look on client/Makefile first, you need to manually define
     some macros like EVENTLOOP, std=c99... on non-Linux enviorment.
 
@@ -49,13 +49,13 @@ multi app dev
     Following steps can hold multiply application develop at the same time.
     Which seprated public and application code clearly.
         (MOC_PATH hold the moc public base code.
-         appxmoc hold the x application's logic code.
-         you can make appymoc, appzmoc, ...)
+         appx hold the x application's logic code.
+         you can mkdir appy, appz, ...)
 
-    0
+    0 (e.g. appx)
     -
-    mkdir appxmoc;
-    cd appxmoc;
+    mkdir appx;
+    cd appx;
 
     1
     -
