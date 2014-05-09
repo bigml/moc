@@ -1,6 +1,6 @@
 MEVENT = 0
 
-BASEDIR = ../../moon/
+BASEDIR = ../moon/
 include $(BASEDIR)Make.env
 
 UNAME := $(shell uname)

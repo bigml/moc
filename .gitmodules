@@ -1,0 +1,3 @@
+[submodule "moon"]
+	path = moon
+	url = http://git.hunantv.com/subplat/moon.git

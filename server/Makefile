@@ -2,7 +2,7 @@
 MEVENT = 0
 EVENTLOOP = 0
 
-BASEDIR = ../../moon/
+BASEDIR = ../moon/
 include $(BASEDIR)Make.env
 
 CFLAGS += -rdynamic

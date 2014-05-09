@@ -1,48 +1,11 @@
 Config {
     logfile = /var/log/moon/moc/client
-#    logfile = mocclient
     trace_level = 7
 }
 
 _netmodules {
     0 {
-        host = localhost
-        port = 5000
-    }
-    1 {
-        host = x-bak.mangoq.com
-        port = 5000
-    }
-}
-
-modules {
-    base {
-        0 {
-            ip = 172.10.7.204
-            port = 5000
-#           non_block = 1
-            timeout_s = 0
-            timeout_u = 800000
-        }
-    }
-
-    chat {
-        0 {
-            ip = 172.10.7.204
-            port = 5000
-            timeout_s = 0
-            timeout_u = 800000
-        }
-
-    }
-
-    collect {
-        0 {
-            ip = localhost
-            port = 5000
-            timeout_s = 0
-            timeout_u = 800000
-        }
-
+        host = linode
+        port = 8999
     }
 }
